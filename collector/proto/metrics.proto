@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package beaver.collector.v1;
+
+option go_package = "github.com/JKang025/beaver/proto/collector;collectorpb";
+
+service MetricsCollector {
+  rpc RecordMetric(RecordMetricRequest) returns (RecordMetricResponse);
+  rpc RegisterMetric(RegisterMetricRequest) returns (RegisterMetricResponse);
+}
+
+message RecordMetricRequest {
+  MetricRef metric = 1;
+  double value = 2;
+}
+
+message RecordMetricResponse {}
+
+message RegisterMetricRequest {
+  MetricRef metric = 1;
+
+  oneof metric_type {
+    CounterMetricConfig counter = 2;
+    GaugeMetricConfig gauge = 3;
+    SampleMetricConfig sample = 4;
+  }
+}
+
+message RegisterMetricResponse {}
+
+message MetricRef {
+  string entity = 1;
+  string name = 2;
+}
+
+message CounterMetricConfig {
+  repeated CounterAggregation aggregations = 1;
+}
+
+enum CounterAggregation {
+  COUNTER_AGGREGATION_UNSPECIFIED = 0;
+  COUNTER_AGGREGATION_SUM = 1;
+  COUNTER_AGGREGATION_RATE = 2;
+}
+
+message GaugeMetricConfig {
+  repeated GaugeAggregation aggregations = 1;
+}
+
+enum GaugeAggregation {
+  GAUGE_AGGREGATION_UNSPECIFIED = 0;
+  GAUGE_AGGREGATION_LAST = 1;
+  GAUGE_AGGREGATION_MIN = 2;
+  GAUGE_AGGREGATION_MAX = 3;
+  GAUGE_AGGREGATION_AVERAGE = 4;
+}
+
+message SampleMetricConfig {
+  repeated SampleAggregation aggregations = 1;
+
+  // Quantiles are expressed from 0.0 through 1.0. For example, 0.99 is p99.
+  repeated double quantiles = 2;
+}
+
+enum SampleAggregation {
+  SAMPLE_AGGREGATION_UNSPECIFIED = 0;
+  SAMPLE_AGGREGATION_COUNT = 1;
+  SAMPLE_AGGREGATION_SUM = 2;
+  SAMPLE_AGGREGATION_AVERAGE = 3;
+}
