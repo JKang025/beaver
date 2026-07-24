@@ -27,7 +27,8 @@ func (s *metricsServer) CountMetric(
 	ctx context.Context,
 	request *collectorpb.CountMetricRequest,
 ) (*collectorpb.CountMetricResponse, error) {
-	series, err := s.lookupSeries(request.GetMetric())
+	seriesKey := convertMetricRefToSeriesKey(request.GetMetric())
+	series, err := s.lookupSeries(seriesKey)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +49,8 @@ func (s *metricsServer) RecordMetric(
 	ctx context.Context,
 	request *collectorpb.RecordMetricRequest,
 ) (*collectorpb.RecordMetricResponse, error) {
-	series, err := s.lookupSeries(request.GetMetric())
+	seriesKey := convertMetricRefToSeriesKey(request.GetMetric())
+	series, err := s.lookupSeries(seriesKey)
 	if err != nil {
 		return nil, err
 	}

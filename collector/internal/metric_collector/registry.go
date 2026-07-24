@@ -11,14 +11,21 @@ type registeredSeries struct {
 	window     seriesWindow
 }
 
+func convertMetricRefToSeriesKey(ref *collectorpb.MetricRef) SeriesKey {
+	return SeriesKey{
+		Entity: ref.GetEntity(),
+		Series: ref.GetSeries(),
+	}
+}
+
 func (s *metricsServer) lookupSeries(
-	ref *collectorpb.MetricRef,
+	seriesKey SeriesKey,
 ) (*collectorpb.Series, error) {
 	s.metricsMutex.RLock()
 	defer s.metricsMutex.RUnlock()
 
-	entityName := ref.Entity
-	seriesName := ref.Series
+	entityName := seriesKey.Entity
+	seriesName := seriesKey.Series
 	seriesMap, entityExists := s.metrics[entityName]
 
 	if !entityExists {
