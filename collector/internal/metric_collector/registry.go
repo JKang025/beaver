@@ -6,6 +6,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type registeredSeries struct {
+	definition *collectorpb.Series
+	window     seriesWindow
+}
+
 func (s *metricsServer) lookupSeries(
 	ref *collectorpb.MetricRef,
 ) (*collectorpb.Series, error) {
