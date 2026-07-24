@@ -33,5 +33,5 @@ func (s *metricsServer) RegisterMetric(
 	ctx context.Context,
 	request *collectorpb.RegisterMetricRequest,
 ) (*collectorpb.RegisterMetricResponse, error) {
-
+	return &collectorpb.RecordMetricResponse{}, nil
 }
