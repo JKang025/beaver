@@ -28,3 +28,10 @@ func (s *metricsServer) RecordMetric(
 
 	return &collectorpb.RecordMetricResponse{}, nil
 }
+
+func (s *metricsServer) RegisterMetric(
+	ctx context.Context,
+	request *collectorpb.RegisterMetricRequest,
+) (*collectorpb.RegisterMetricResponse, error) {
+
+}
