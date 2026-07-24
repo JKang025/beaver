@@ -15,6 +15,7 @@ type metricsServer struct {
 	metrics      map[string]map[string]*collectorpb.Series
 }
 
+// TODO: need map of SeriesKey to pending updates
 func NewMetricsServer() collectorpb.MetricsCollectorServer {
 	return &metricsServer{
 		metrics: make(map[string]map[string]*collectorpb.Series),
@@ -65,6 +66,7 @@ func (s *metricsServer) RecordMetric(
 
 // RegisterMetrics registers metric series for an entity.
 // Existing series and later duplicates in the request are ignored.
+// TODO: also register a map of SeriesKey -> Window
 func (s *metricsServer) RegisterMetrics(
 	ctx context.Context,
 	request *collectorpb.RegisterMetricsRequest,

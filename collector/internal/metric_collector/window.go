@@ -37,8 +37,9 @@ type SampleBucket struct {
 }
 
 type WindowMetadata struct {
-	Duration     time.Duration
-	CurrentStart time.Time
+	Duration       time.Duration // rolling window size
+	BucketDuration time.Duration // rolling window step-size
+	CurrentStart   time.Time
 }
 
 type sealedBucket interface {
