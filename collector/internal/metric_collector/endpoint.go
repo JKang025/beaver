@@ -36,6 +36,8 @@ func (s *metricsServer) RecordMetric(
 	return &collectorpb.RecordMetricResponse{}, nil
 }
 
+// RegisterMetrics registers metric series for an entity.
+// Existing series and later duplicates in the request are ignored.
 func (s *metricsServer) RegisterMetrics(
 	ctx context.Context,
 	request *collectorpb.RegisterMetricsRequest,
