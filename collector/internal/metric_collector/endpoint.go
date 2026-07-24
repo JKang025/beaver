@@ -2,7 +2,6 @@ package metriccollector
 
 import (
 	"context"
-	"log"
 	"sync"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
@@ -22,17 +21,45 @@ func NewMetricsServer() collectorpb.MetricsCollectorServer {
 	}
 }
 
+// CountMetric adds an integer value to a counter series.
+func (s *metricsServer) CountMetric(
+	ctx context.Context,
+	request *collectorpb.CountMetricRequest,
+) (*collectorpb.CountMetricResponse, error) {
+	series, err := s.lookupSeries(request.GetMetric())
+	if err != nil {
+		return nil, err
+	}
+	if series.GetCounter() == nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"series %q is not a counter",
+			request.GetMetric().GetSeries(),
+		)
+	}
+
+	// TODO: Add request.GetValue() to the counter accumulator.
+	return &collectorpb.CountMetricResponse{}, nil
+}
+
+// RecordMetric records a floating-point observation in a gauge or sample series.
 func (s *metricsServer) RecordMetric(
 	ctx context.Context,
 	request *collectorpb.RecordMetricRequest,
 ) (*collectorpb.RecordMetricResponse, error) {
-	log.Printf(
-		"received metric: entity=%q series=%q value=%v",
-		request.GetMetric().GetEntity(),
-		request.GetMetric().GetSeries(),
-		request.GetValue(),
-	)
+	series, err := s.lookupSeries(request.GetMetric())
+	if err != nil {
+		return nil, err
+	}
+	if series.GetCounter() != nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"series %q is a counter; use CountMetric",
+			request.GetMetric().GetSeries(),
+		)
+	}
 
+	// TODO: Record request.GetValue() in the gauge or sample accumulator.
 	return &collectorpb.RecordMetricResponse{}, nil
 }
 

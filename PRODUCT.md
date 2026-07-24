@@ -21,8 +21,12 @@ buckets before storage, rather than storing an observation for every request.
 
 Examples of metric instruments:
 
-- flat counter: accumulate (bump by 1) or set a specific number (INT). Useful to represent things point in time (static, enum, # sucsess request, # conc req right now)
-  - this can be be exeported to timeseries stats (SUM, COUNT, AVG, RATE)
+- counter: add values to a running total. Useful for values such as the number
+  of successful requests. Counters can be exported as time-series statistics
+  such as sum and rate.
+- gauge: record the current value of something, such as the number of concurrent
+  requests. Gauges can be exported as time-series statistics such as last,
+  minimum, maximum, and average.
 - quantile stats: stream of values (p99 of x value in the last y time), can sort by P25, P50, P99, etc. Then can also be exported to timeseries similarity. Needs to be backed by more computations/digests, more expensive.
 
 For a 60-second bucket, a `prompt_length` distribution can expose derived

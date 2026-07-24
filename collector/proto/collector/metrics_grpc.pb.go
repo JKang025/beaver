@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	MetricsCollector_CountMetric_FullMethodName     = "/beaver.collector.v1.MetricsCollector/CountMetric"
 	MetricsCollector_RecordMetric_FullMethodName    = "/beaver.collector.v1.MetricsCollector/RecordMetric"
 	MetricsCollector_RegisterMetrics_FullMethodName = "/beaver.collector.v1.MetricsCollector/RegisterMetrics"
 )
@@ -27,6 +28,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MetricsCollectorClient interface {
+	CountMetric(ctx context.Context, in *CountMetricRequest, opts ...grpc.CallOption) (*CountMetricResponse, error)
 	RecordMetric(ctx context.Context, in *RecordMetricRequest, opts ...grpc.CallOption) (*RecordMetricResponse, error)
 	RegisterMetrics(ctx context.Context, in *RegisterMetricsRequest, opts ...grpc.CallOption) (*RegisterMetricsResponse, error)
 }
@@ -37,6 +39,16 @@ type metricsCollectorClient struct {
 
 func NewMetricsCollectorClient(cc grpc.ClientConnInterface) MetricsCollectorClient {
 	return &metricsCollectorClient{cc}
+}
+
+func (c *metricsCollectorClient) CountMetric(ctx context.Context, in *CountMetricRequest, opts ...grpc.CallOption) (*CountMetricResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CountMetricResponse)
+	err := c.cc.Invoke(ctx, MetricsCollector_CountMetric_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *metricsCollectorClient) RecordMetric(ctx context.Context, in *RecordMetricRequest, opts ...grpc.CallOption) (*RecordMetricResponse, error) {
@@ -63,6 +75,7 @@ func (c *metricsCollectorClient) RegisterMetrics(ctx context.Context, in *Regist
 // All implementations must embed UnimplementedMetricsCollectorServer
 // for forward compatibility.
 type MetricsCollectorServer interface {
+	CountMetric(context.Context, *CountMetricRequest) (*CountMetricResponse, error)
 	RecordMetric(context.Context, *RecordMetricRequest) (*RecordMetricResponse, error)
 	RegisterMetrics(context.Context, *RegisterMetricsRequest) (*RegisterMetricsResponse, error)
 	mustEmbedUnimplementedMetricsCollectorServer()
@@ -75,6 +88,9 @@ type MetricsCollectorServer interface {
 // pointer dereference when methods are called.
 type UnimplementedMetricsCollectorServer struct{}
 
+func (UnimplementedMetricsCollectorServer) CountMetric(context.Context, *CountMetricRequest) (*CountMetricResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CountMetric not implemented")
+}
 func (UnimplementedMetricsCollectorServer) RecordMetric(context.Context, *RecordMetricRequest) (*RecordMetricResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RecordMetric not implemented")
 }
@@ -100,6 +116,24 @@ func RegisterMetricsCollectorServer(s grpc.ServiceRegistrar, srv MetricsCollecto
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&MetricsCollector_ServiceDesc, srv)
+}
+
+func _MetricsCollector_CountMetric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CountMetricRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MetricsCollectorServer).CountMetric(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MetricsCollector_CountMetric_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MetricsCollectorServer).CountMetric(ctx, req.(*CountMetricRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _MetricsCollector_RecordMetric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -145,6 +179,10 @@ var MetricsCollector_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "beaver.collector.v1.MetricsCollector",
 	HandlerType: (*MetricsCollectorServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CountMetric",
+			Handler:    _MetricsCollector_CountMetric_Handler,
+		},
 		{
 			MethodName: "RecordMetric",
 			Handler:    _MetricsCollector_RecordMetric_Handler,
