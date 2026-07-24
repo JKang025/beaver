@@ -28,7 +28,7 @@ Examples of metric instruments:
 For a 60-second bucket, a `prompt_length` distribution can expose derived
 series such as `count`, `sum`, `p50`, and `p99`. The UI may present these as
 `prompt_length.p50.60` and `prompt_length.p99.60`; storage should retain the
-metric name, statistic, bucket duration, entity, bucket start, and value as
+metric series, statistic, bucket duration, entity, bucket start, and value as
 separate fields.
 
 For each time bucket, it should have relevant rolling window step size. For 60 seconds, default should be 1 (this can be changed later.).

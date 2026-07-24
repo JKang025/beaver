@@ -6,7 +6,7 @@ option go_package = "github.com/JKang025/beaver/proto/collector;collectorpb";
 
 service MetricsCollector {
   rpc RecordMetric(RecordMetricRequest) returns (RecordMetricResponse);
-  rpc RegisterMetric(RegisterMetricRequest) returns (RegisterMetricResponse);
+  rpc RegisterMetrics(RegisterMetricsRequest) returns (RegisterMetricsResponse);
 }
 
 message RecordMetricRequest {
@@ -16,25 +16,26 @@ message RecordMetricRequest {
 
 message RecordMetricResponse {}
 
-message RegisterMetricRequest {
-  MetricDefinition metric = 1;
+message RegisterMetricsRequest {
+  string entity = 1;
+  repeated Series series = 2;
 }
 
-message MetricDefinition {
-  MetricRef ref = 1;
+message Series {
+  string name = 1;
 
-  oneof metric_type {
+  oneof config {
     CounterMetricConfig counter = 2;
     GaugeMetricConfig gauge = 3;
     SampleMetricConfig sample = 4;
   }
 }
 
-message RegisterMetricResponse {}
+message RegisterMetricsResponse {}
 
 message MetricRef {
   string entity = 1;
-  string name = 2;
+  string series = 2;
 }
 
 message CounterMetricConfig {

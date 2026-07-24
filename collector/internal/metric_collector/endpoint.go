@@ -3,18 +3,22 @@ package metriccollector
 import (
 	"context"
 	"log"
+	"sync"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type metricsServer struct {
 	collectorpb.UnimplementedMetricsCollectorServer
-	metrics map[string]map[string]*metric
+	metricsMutex sync.RWMutex
+	metrics      map[string]map[string]*collectorpb.Series
 }
 
 func NewMetricsServer() collectorpb.MetricsCollectorServer {
 	return &metricsServer{
-		metrics: make(map[string]map[string]*metric),
+		metrics: make(map[string]map[string]*collectorpb.Series),
 	}
 }
 
@@ -23,18 +27,63 @@ func (s *metricsServer) RecordMetric(
 	request *collectorpb.RecordMetricRequest,
 ) (*collectorpb.RecordMetricResponse, error) {
 	log.Printf(
-		"received metric: entity=%q name=%q value=%v",
+		"received metric: entity=%q series=%q value=%v",
 		request.GetMetric().GetEntity(),
-		request.GetMetric().GetName(),
+		request.GetMetric().GetSeries(),
 		request.GetValue(),
 	)
 
 	return &collectorpb.RecordMetricResponse{}, nil
 }
 
-func (s *metricsServer) RegisterMetric(
+func (s *metricsServer) RegisterMetrics(
 	ctx context.Context,
-	request *collectorpb.RegisterMetricRequest,
-) (*collectorpb.RegisterMetricResponse, error) {
-	return &collectorpb.RegisterMetricResponse{}, nil
+	request *collectorpb.RegisterMetricsRequest,
+) (*collectorpb.RegisterMetricsResponse, error) {
+	entity := request.GetEntity()
+	if entity == "" {
+		return nil, status.Error(codes.InvalidArgument, "entity is required")
+	}
+
+	seriesDefinitions := request.GetSeries()
+	if len(seriesDefinitions) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "at least one series is required")
+	}
+
+	// validating basic seriesDefinition contract
+	for _, seriesDefinition := range seriesDefinitions {
+		seriesName := seriesDefinition.GetName()
+		if seriesName == "" {
+			return nil, status.Error(codes.InvalidArgument, "series name is required")
+		}
+		if seriesDefinition.GetConfig() == nil {
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"series %q must have a config",
+				seriesName,
+			)
+		}
+	}
+
+	s.metricsMutex.Lock()
+	defer s.metricsMutex.Unlock()
+
+	registeredSeries, entityExists := s.metrics[entity]
+
+	if !entityExists {
+		registeredSeries = make(map[string]*collectorpb.Series)
+		s.metrics[entity] = registeredSeries
+	}
+
+	for _, seriesDefinition := range seriesDefinitions {
+		seriesName := seriesDefinition.GetName()
+		_, seriesExists := registeredSeries[seriesName]
+		if seriesExists {
+			continue
+		}
+
+		registeredSeries[seriesName] = seriesDefinition
+	}
+
+	return &collectorpb.RegisterMetricsResponse{}, nil
 }

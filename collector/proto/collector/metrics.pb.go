@@ -265,27 +265,28 @@ func (*RecordMetricResponse) Descriptor() ([]byte, []int) {
 	return file_metrics_proto_rawDescGZIP(), []int{1}
 }
 
-type RegisterMetricRequest struct {
+type RegisterMetricsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Metric        *MetricDefinition      `protobuf:"bytes,1,opt,name=metric,proto3" json:"metric,omitempty"`
+	Entity        string                 `protobuf:"bytes,1,opt,name=entity,proto3" json:"entity,omitempty"`
+	Series        []*Series              `protobuf:"bytes,2,rep,name=series,proto3" json:"series,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RegisterMetricRequest) Reset() {
-	*x = RegisterMetricRequest{}
+func (x *RegisterMetricsRequest) Reset() {
+	*x = RegisterMetricsRequest{}
 	mi := &file_metrics_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RegisterMetricRequest) String() string {
+func (x *RegisterMetricsRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RegisterMetricRequest) ProtoMessage() {}
+func (*RegisterMetricsRequest) ProtoMessage() {}
 
-func (x *RegisterMetricRequest) ProtoReflect() protoreflect.Message {
+func (x *RegisterMetricsRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_metrics_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -297,45 +298,52 @@ func (x *RegisterMetricRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RegisterMetricRequest.ProtoReflect.Descriptor instead.
-func (*RegisterMetricRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use RegisterMetricsRequest.ProtoReflect.Descriptor instead.
+func (*RegisterMetricsRequest) Descriptor() ([]byte, []int) {
 	return file_metrics_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *RegisterMetricRequest) GetMetric() *MetricDefinition {
+func (x *RegisterMetricsRequest) GetEntity() string {
 	if x != nil {
-		return x.Metric
+		return x.Entity
+	}
+	return ""
+}
+
+func (x *RegisterMetricsRequest) GetSeries() []*Series {
+	if x != nil {
+		return x.Series
 	}
 	return nil
 }
 
-type MetricDefinition struct {
+type Series struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Ref   *MetricRef             `protobuf:"bytes,1,opt,name=ref,proto3" json:"ref,omitempty"`
-	// Types that are valid to be assigned to MetricType:
+	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Types that are valid to be assigned to Config:
 	//
-	//	*MetricDefinition_Counter
-	//	*MetricDefinition_Gauge
-	//	*MetricDefinition_Sample
-	MetricType    isMetricDefinition_MetricType `protobuf_oneof:"metric_type"`
+	//	*Series_Counter
+	//	*Series_Gauge
+	//	*Series_Sample
+	Config        isSeries_Config `protobuf_oneof:"config"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MetricDefinition) Reset() {
-	*x = MetricDefinition{}
+func (x *Series) Reset() {
+	*x = Series{}
 	mi := &file_metrics_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MetricDefinition) String() string {
+func (x *Series) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MetricDefinition) ProtoMessage() {}
+func (*Series) ProtoMessage() {}
 
-func (x *MetricDefinition) ProtoReflect() protoreflect.Message {
+func (x *Series) ProtoReflect() protoreflect.Message {
 	mi := &file_metrics_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -347,94 +355,94 @@ func (x *MetricDefinition) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MetricDefinition.ProtoReflect.Descriptor instead.
-func (*MetricDefinition) Descriptor() ([]byte, []int) {
+// Deprecated: Use Series.ProtoReflect.Descriptor instead.
+func (*Series) Descriptor() ([]byte, []int) {
 	return file_metrics_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *MetricDefinition) GetRef() *MetricRef {
+func (x *Series) GetName() string {
 	if x != nil {
-		return x.Ref
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Series) GetConfig() isSeries_Config {
+	if x != nil {
+		return x.Config
 	}
 	return nil
 }
 
-func (x *MetricDefinition) GetMetricType() isMetricDefinition_MetricType {
+func (x *Series) GetCounter() *CounterMetricConfig {
 	if x != nil {
-		return x.MetricType
-	}
-	return nil
-}
-
-func (x *MetricDefinition) GetCounter() *CounterMetricConfig {
-	if x != nil {
-		if x, ok := x.MetricType.(*MetricDefinition_Counter); ok {
+		if x, ok := x.Config.(*Series_Counter); ok {
 			return x.Counter
 		}
 	}
 	return nil
 }
 
-func (x *MetricDefinition) GetGauge() *GaugeMetricConfig {
+func (x *Series) GetGauge() *GaugeMetricConfig {
 	if x != nil {
-		if x, ok := x.MetricType.(*MetricDefinition_Gauge); ok {
+		if x, ok := x.Config.(*Series_Gauge); ok {
 			return x.Gauge
 		}
 	}
 	return nil
 }
 
-func (x *MetricDefinition) GetSample() *SampleMetricConfig {
+func (x *Series) GetSample() *SampleMetricConfig {
 	if x != nil {
-		if x, ok := x.MetricType.(*MetricDefinition_Sample); ok {
+		if x, ok := x.Config.(*Series_Sample); ok {
 			return x.Sample
 		}
 	}
 	return nil
 }
 
-type isMetricDefinition_MetricType interface {
-	isMetricDefinition_MetricType()
+type isSeries_Config interface {
+	isSeries_Config()
 }
 
-type MetricDefinition_Counter struct {
+type Series_Counter struct {
 	Counter *CounterMetricConfig `protobuf:"bytes,2,opt,name=counter,proto3,oneof"`
 }
 
-type MetricDefinition_Gauge struct {
+type Series_Gauge struct {
 	Gauge *GaugeMetricConfig `protobuf:"bytes,3,opt,name=gauge,proto3,oneof"`
 }
 
-type MetricDefinition_Sample struct {
+type Series_Sample struct {
 	Sample *SampleMetricConfig `protobuf:"bytes,4,opt,name=sample,proto3,oneof"`
 }
 
-func (*MetricDefinition_Counter) isMetricDefinition_MetricType() {}
+func (*Series_Counter) isSeries_Config() {}
 
-func (*MetricDefinition_Gauge) isMetricDefinition_MetricType() {}
+func (*Series_Gauge) isSeries_Config() {}
 
-func (*MetricDefinition_Sample) isMetricDefinition_MetricType() {}
+func (*Series_Sample) isSeries_Config() {}
 
-type RegisterMetricResponse struct {
+type RegisterMetricsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *RegisterMetricResponse) Reset() {
-	*x = RegisterMetricResponse{}
+func (x *RegisterMetricsResponse) Reset() {
+	*x = RegisterMetricsResponse{}
 	mi := &file_metrics_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *RegisterMetricResponse) String() string {
+func (x *RegisterMetricsResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RegisterMetricResponse) ProtoMessage() {}
+func (*RegisterMetricsResponse) ProtoMessage() {}
 
-func (x *RegisterMetricResponse) ProtoReflect() protoreflect.Message {
+func (x *RegisterMetricsResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_metrics_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -446,15 +454,15 @@ func (x *RegisterMetricResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RegisterMetricResponse.ProtoReflect.Descriptor instead.
-func (*RegisterMetricResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use RegisterMetricsResponse.ProtoReflect.Descriptor instead.
+func (*RegisterMetricsResponse) Descriptor() ([]byte, []int) {
 	return file_metrics_proto_rawDescGZIP(), []int{4}
 }
 
 type MetricRef struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Entity        string                 `protobuf:"bytes,1,opt,name=entity,proto3" json:"entity,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Series        string                 `protobuf:"bytes,2,opt,name=series,proto3" json:"series,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -496,9 +504,9 @@ func (x *MetricRef) GetEntity() string {
 	return ""
 }
 
-func (x *MetricRef) GetName() string {
+func (x *MetricRef) GetSeries() string {
 	if x != nil {
-		return x.Name
+		return x.Series
 	}
 	return ""
 }
@@ -652,19 +660,20 @@ const file_metrics_proto_rawDesc = "" +
 	"\x13RecordMetricRequest\x126\n" +
 	"\x06metric\x18\x01 \x01(\v2\x1e.beaver.collector.v1.MetricRefR\x06metric\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value\"\x16\n" +
-	"\x14RecordMetricResponse\"V\n" +
-	"\x15RegisterMetricRequest\x12=\n" +
-	"\x06metric\x18\x01 \x01(\v2%.beaver.collector.v1.MetricDefinitionR\x06metric\"\x9c\x02\n" +
-	"\x10MetricDefinition\x120\n" +
-	"\x03ref\x18\x01 \x01(\v2\x1e.beaver.collector.v1.MetricRefR\x03ref\x12D\n" +
+	"\x14RecordMetricResponse\"e\n" +
+	"\x16RegisterMetricsRequest\x12\x16\n" +
+	"\x06entity\x18\x01 \x01(\tR\x06entity\x123\n" +
+	"\x06series\x18\x02 \x03(\v2\x1b.beaver.collector.v1.SeriesR\x06series\"\xef\x01\n" +
+	"\x06Series\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12D\n" +
 	"\acounter\x18\x02 \x01(\v2(.beaver.collector.v1.CounterMetricConfigH\x00R\acounter\x12>\n" +
 	"\x05gauge\x18\x03 \x01(\v2&.beaver.collector.v1.GaugeMetricConfigH\x00R\x05gauge\x12A\n" +
-	"\x06sample\x18\x04 \x01(\v2'.beaver.collector.v1.SampleMetricConfigH\x00R\x06sampleB\r\n" +
-	"\vmetric_type\"\x18\n" +
-	"\x16RegisterMetricResponse\"7\n" +
+	"\x06sample\x18\x04 \x01(\v2'.beaver.collector.v1.SampleMetricConfigH\x00R\x06sampleB\b\n" +
+	"\x06config\"\x19\n" +
+	"\x17RegisterMetricsResponse\";\n" +
 	"\tMetricRef\x12\x16\n" +
-	"\x06entity\x18\x01 \x01(\tR\x06entity\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"b\n" +
+	"\x06entity\x18\x01 \x01(\tR\x06entity\x12\x16\n" +
+	"\x06series\x18\x02 \x01(\tR\x06series\"b\n" +
 	"\x13CounterMetricConfig\x12K\n" +
 	"\faggregations\x18\x01 \x03(\x0e2'.beaver.collector.v1.CounterAggregationR\faggregations\"^\n" +
 	"\x11GaugeMetricConfig\x12I\n" +
@@ -686,10 +695,10 @@ const file_metrics_proto_rawDesc = "" +
 	"\x1eSAMPLE_AGGREGATION_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18SAMPLE_AGGREGATION_COUNT\x10\x01\x12\x1a\n" +
 	"\x16SAMPLE_AGGREGATION_SUM\x10\x02\x12\x1e\n" +
-	"\x1aSAMPLE_AGGREGATION_AVERAGE\x10\x032\xe2\x01\n" +
+	"\x1aSAMPLE_AGGREGATION_AVERAGE\x10\x032\xe5\x01\n" +
 	"\x10MetricsCollector\x12c\n" +
-	"\fRecordMetric\x12(.beaver.collector.v1.RecordMetricRequest\x1a).beaver.collector.v1.RecordMetricResponse\x12i\n" +
-	"\x0eRegisterMetric\x12*.beaver.collector.v1.RegisterMetricRequest\x1a+.beaver.collector.v1.RegisterMetricResponseB8Z6github.com/JKang025/beaver/proto/collector;collectorpbb\x06proto3"
+	"\fRecordMetric\x12(.beaver.collector.v1.RecordMetricRequest\x1a).beaver.collector.v1.RecordMetricResponse\x12l\n" +
+	"\x0fRegisterMetrics\x12+.beaver.collector.v1.RegisterMetricsRequest\x1a,.beaver.collector.v1.RegisterMetricsResponseB8Z6github.com/JKang025/beaver/proto/collector;collectorpbb\x06proto3"
 
 var (
 	file_metrics_proto_rawDescOnce sync.Once
@@ -706,38 +715,37 @@ func file_metrics_proto_rawDescGZIP() []byte {
 var file_metrics_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_metrics_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_metrics_proto_goTypes = []any{
-	(CounterAggregation)(0),        // 0: beaver.collector.v1.CounterAggregation
-	(GaugeAggregation)(0),          // 1: beaver.collector.v1.GaugeAggregation
-	(SampleAggregation)(0),         // 2: beaver.collector.v1.SampleAggregation
-	(*RecordMetricRequest)(nil),    // 3: beaver.collector.v1.RecordMetricRequest
-	(*RecordMetricResponse)(nil),   // 4: beaver.collector.v1.RecordMetricResponse
-	(*RegisterMetricRequest)(nil),  // 5: beaver.collector.v1.RegisterMetricRequest
-	(*MetricDefinition)(nil),       // 6: beaver.collector.v1.MetricDefinition
-	(*RegisterMetricResponse)(nil), // 7: beaver.collector.v1.RegisterMetricResponse
-	(*MetricRef)(nil),              // 8: beaver.collector.v1.MetricRef
-	(*CounterMetricConfig)(nil),    // 9: beaver.collector.v1.CounterMetricConfig
-	(*GaugeMetricConfig)(nil),      // 10: beaver.collector.v1.GaugeMetricConfig
-	(*SampleMetricConfig)(nil),     // 11: beaver.collector.v1.SampleMetricConfig
+	(CounterAggregation)(0),         // 0: beaver.collector.v1.CounterAggregation
+	(GaugeAggregation)(0),           // 1: beaver.collector.v1.GaugeAggregation
+	(SampleAggregation)(0),          // 2: beaver.collector.v1.SampleAggregation
+	(*RecordMetricRequest)(nil),     // 3: beaver.collector.v1.RecordMetricRequest
+	(*RecordMetricResponse)(nil),    // 4: beaver.collector.v1.RecordMetricResponse
+	(*RegisterMetricsRequest)(nil),  // 5: beaver.collector.v1.RegisterMetricsRequest
+	(*Series)(nil),                  // 6: beaver.collector.v1.Series
+	(*RegisterMetricsResponse)(nil), // 7: beaver.collector.v1.RegisterMetricsResponse
+	(*MetricRef)(nil),               // 8: beaver.collector.v1.MetricRef
+	(*CounterMetricConfig)(nil),     // 9: beaver.collector.v1.CounterMetricConfig
+	(*GaugeMetricConfig)(nil),       // 10: beaver.collector.v1.GaugeMetricConfig
+	(*SampleMetricConfig)(nil),      // 11: beaver.collector.v1.SampleMetricConfig
 }
 var file_metrics_proto_depIdxs = []int32{
 	8,  // 0: beaver.collector.v1.RecordMetricRequest.metric:type_name -> beaver.collector.v1.MetricRef
-	6,  // 1: beaver.collector.v1.RegisterMetricRequest.metric:type_name -> beaver.collector.v1.MetricDefinition
-	8,  // 2: beaver.collector.v1.MetricDefinition.ref:type_name -> beaver.collector.v1.MetricRef
-	9,  // 3: beaver.collector.v1.MetricDefinition.counter:type_name -> beaver.collector.v1.CounterMetricConfig
-	10, // 4: beaver.collector.v1.MetricDefinition.gauge:type_name -> beaver.collector.v1.GaugeMetricConfig
-	11, // 5: beaver.collector.v1.MetricDefinition.sample:type_name -> beaver.collector.v1.SampleMetricConfig
-	0,  // 6: beaver.collector.v1.CounterMetricConfig.aggregations:type_name -> beaver.collector.v1.CounterAggregation
-	1,  // 7: beaver.collector.v1.GaugeMetricConfig.aggregations:type_name -> beaver.collector.v1.GaugeAggregation
-	2,  // 8: beaver.collector.v1.SampleMetricConfig.aggregations:type_name -> beaver.collector.v1.SampleAggregation
-	3,  // 9: beaver.collector.v1.MetricsCollector.RecordMetric:input_type -> beaver.collector.v1.RecordMetricRequest
-	5,  // 10: beaver.collector.v1.MetricsCollector.RegisterMetric:input_type -> beaver.collector.v1.RegisterMetricRequest
-	4,  // 11: beaver.collector.v1.MetricsCollector.RecordMetric:output_type -> beaver.collector.v1.RecordMetricResponse
-	7,  // 12: beaver.collector.v1.MetricsCollector.RegisterMetric:output_type -> beaver.collector.v1.RegisterMetricResponse
-	11, // [11:13] is the sub-list for method output_type
-	9,  // [9:11] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	6,  // 1: beaver.collector.v1.RegisterMetricsRequest.series:type_name -> beaver.collector.v1.Series
+	9,  // 2: beaver.collector.v1.Series.counter:type_name -> beaver.collector.v1.CounterMetricConfig
+	10, // 3: beaver.collector.v1.Series.gauge:type_name -> beaver.collector.v1.GaugeMetricConfig
+	11, // 4: beaver.collector.v1.Series.sample:type_name -> beaver.collector.v1.SampleMetricConfig
+	0,  // 5: beaver.collector.v1.CounterMetricConfig.aggregations:type_name -> beaver.collector.v1.CounterAggregation
+	1,  // 6: beaver.collector.v1.GaugeMetricConfig.aggregations:type_name -> beaver.collector.v1.GaugeAggregation
+	2,  // 7: beaver.collector.v1.SampleMetricConfig.aggregations:type_name -> beaver.collector.v1.SampleAggregation
+	3,  // 8: beaver.collector.v1.MetricsCollector.RecordMetric:input_type -> beaver.collector.v1.RecordMetricRequest
+	5,  // 9: beaver.collector.v1.MetricsCollector.RegisterMetrics:input_type -> beaver.collector.v1.RegisterMetricsRequest
+	4,  // 10: beaver.collector.v1.MetricsCollector.RecordMetric:output_type -> beaver.collector.v1.RecordMetricResponse
+	7,  // 11: beaver.collector.v1.MetricsCollector.RegisterMetrics:output_type -> beaver.collector.v1.RegisterMetricsResponse
+	10, // [10:12] is the sub-list for method output_type
+	8,  // [8:10] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_metrics_proto_init() }
@@ -746,9 +754,9 @@ func file_metrics_proto_init() {
 		return
 	}
 	file_metrics_proto_msgTypes[3].OneofWrappers = []any{
-		(*MetricDefinition_Counter)(nil),
-		(*MetricDefinition_Gauge)(nil),
-		(*MetricDefinition_Sample)(nil),
+		(*Series_Counter)(nil),
+		(*Series_Gauge)(nil),
+		(*Series_Sample)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

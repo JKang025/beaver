@@ -19,8 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MetricsCollector_RecordMetric_FullMethodName   = "/beaver.collector.v1.MetricsCollector/RecordMetric"
-	MetricsCollector_RegisterMetric_FullMethodName = "/beaver.collector.v1.MetricsCollector/RegisterMetric"
+	MetricsCollector_RecordMetric_FullMethodName    = "/beaver.collector.v1.MetricsCollector/RecordMetric"
+	MetricsCollector_RegisterMetrics_FullMethodName = "/beaver.collector.v1.MetricsCollector/RegisterMetrics"
 )
 
 // MetricsCollectorClient is the client API for MetricsCollector service.
@@ -28,7 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MetricsCollectorClient interface {
 	RecordMetric(ctx context.Context, in *RecordMetricRequest, opts ...grpc.CallOption) (*RecordMetricResponse, error)
-	RegisterMetric(ctx context.Context, in *RegisterMetricRequest, opts ...grpc.CallOption) (*RegisterMetricResponse, error)
+	RegisterMetrics(ctx context.Context, in *RegisterMetricsRequest, opts ...grpc.CallOption) (*RegisterMetricsResponse, error)
 }
 
 type metricsCollectorClient struct {
@@ -49,10 +49,10 @@ func (c *metricsCollectorClient) RecordMetric(ctx context.Context, in *RecordMet
 	return out, nil
 }
 
-func (c *metricsCollectorClient) RegisterMetric(ctx context.Context, in *RegisterMetricRequest, opts ...grpc.CallOption) (*RegisterMetricResponse, error) {
+func (c *metricsCollectorClient) RegisterMetrics(ctx context.Context, in *RegisterMetricsRequest, opts ...grpc.CallOption) (*RegisterMetricsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RegisterMetricResponse)
-	err := c.cc.Invoke(ctx, MetricsCollector_RegisterMetric_FullMethodName, in, out, cOpts...)
+	out := new(RegisterMetricsResponse)
+	err := c.cc.Invoke(ctx, MetricsCollector_RegisterMetrics_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (c *metricsCollectorClient) RegisterMetric(ctx context.Context, in *Registe
 // for forward compatibility.
 type MetricsCollectorServer interface {
 	RecordMetric(context.Context, *RecordMetricRequest) (*RecordMetricResponse, error)
-	RegisterMetric(context.Context, *RegisterMetricRequest) (*RegisterMetricResponse, error)
+	RegisterMetrics(context.Context, *RegisterMetricsRequest) (*RegisterMetricsResponse, error)
 	mustEmbedUnimplementedMetricsCollectorServer()
 }
 
@@ -78,8 +78,8 @@ type UnimplementedMetricsCollectorServer struct{}
 func (UnimplementedMetricsCollectorServer) RecordMetric(context.Context, *RecordMetricRequest) (*RecordMetricResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RecordMetric not implemented")
 }
-func (UnimplementedMetricsCollectorServer) RegisterMetric(context.Context, *RegisterMetricRequest) (*RegisterMetricResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RegisterMetric not implemented")
+func (UnimplementedMetricsCollectorServer) RegisterMetrics(context.Context, *RegisterMetricsRequest) (*RegisterMetricsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RegisterMetrics not implemented")
 }
 func (UnimplementedMetricsCollectorServer) mustEmbedUnimplementedMetricsCollectorServer() {}
 func (UnimplementedMetricsCollectorServer) testEmbeddedByValue()                          {}
@@ -120,20 +120,20 @@ func _MetricsCollector_RecordMetric_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MetricsCollector_RegisterMetric_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RegisterMetricRequest)
+func _MetricsCollector_RegisterMetrics_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterMetricsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MetricsCollectorServer).RegisterMetric(ctx, in)
+		return srv.(MetricsCollectorServer).RegisterMetrics(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MetricsCollector_RegisterMetric_FullMethodName,
+		FullMethod: MetricsCollector_RegisterMetrics_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricsCollectorServer).RegisterMetric(ctx, req.(*RegisterMetricRequest))
+		return srv.(MetricsCollectorServer).RegisterMetrics(ctx, req.(*RegisterMetricsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -150,8 +150,8 @@ var MetricsCollector_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MetricsCollector_RecordMetric_Handler,
 		},
 		{
-			MethodName: "RegisterMetric",
-			Handler:    _MetricsCollector_RegisterMetric_Handler,
+			MethodName: "RegisterMetrics",
+			Handler:    _MetricsCollector_RegisterMetrics_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
