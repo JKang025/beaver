@@ -17,7 +17,11 @@ message RecordMetricRequest {
 message RecordMetricResponse {}
 
 message RegisterMetricRequest {
-  MetricRef metric = 1;
+  MetricDefinition metric = 1;
+}
+
+message MetricDefinition {
+  MetricRef ref = 1;
 
   oneof metric_type {
     CounterMetricConfig counter = 2;

@@ -9,10 +9,13 @@ import (
 
 type metricsServer struct {
 	collectorpb.UnimplementedMetricsCollectorServer
+	metrics map[string]map[string]*metric
 }
 
 func NewMetricsServer() collectorpb.MetricsCollectorServer {
-	return &metricsServer{}
+	return &metricsServer{
+		metrics: make(map[string]map[string]*metric),
+	}
 }
 
 func (s *metricsServer) RecordMetric(
@@ -33,5 +36,5 @@ func (s *metricsServer) RegisterMetric(
 	ctx context.Context,
 	request *collectorpb.RegisterMetricRequest,
 ) (*collectorpb.RegisterMetricResponse, error) {
-	return &collectorpb.RecordMetricResponse{}, nil
+	return &collectorpb.RegisterMetricResponse{}, nil
 }

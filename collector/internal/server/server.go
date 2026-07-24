@@ -1,7 +1,7 @@
 package server
 
 import (
-	metriccollector "github.com/JKang025/beaver/internal/metriccollector"
+	metriccollector "github.com/JKang025/beaver/internal/metric_collector"
 	collectorpb "github.com/JKang025/beaver/proto/collector"
 	"google.golang.org/grpc"
 )
