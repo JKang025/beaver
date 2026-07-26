@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
 
@@ -13,7 +14,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	grpcServer := server.New()
+	grpcServer := server.New(context.Background())
 
 	log.Println("collector listening on :50051")
 

@@ -19,6 +19,7 @@ const defaultObservationBufferCapacity = 1000
 func NewMetricsServer(ctx context.Context) collectorpb.MetricsCollectorServer {
 	registry := newSeriesRegistry(defaultObservationBufferCapacity)
 
+	registry.startWorkers(ctx)
 	return &metricsServer{
 		registry: registry,
 	}

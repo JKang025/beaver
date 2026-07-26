@@ -269,7 +269,7 @@ func TestMetricEndpointsValidateSeriesType(t *testing.T) {
 func newTestMetricsServer(t *testing.T) *metricsServer {
 	t.Helper()
 
-	server, ok := NewMetricsServer().(*metricsServer)
+	server, ok := NewMetricsServer(t.Context()).(*metricsServer)
 	if !ok {
 		t.Fatal("NewMetricsServer() did not return *metricsServer")
 	}

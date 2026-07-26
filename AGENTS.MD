@@ -10,3 +10,4 @@
 - Do not restate what clear code already says or comment routine operations line by line.
 - Prefer clear naming and structure over comments; use comments only where they add meaningful context.
 - Keep comments concise and update them whenever the related behavior changes.
+- Always comment (briefly, but more if needed) on what each type represents

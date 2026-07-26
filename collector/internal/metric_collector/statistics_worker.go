@@ -2,6 +2,7 @@ package metriccollector
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
@@ -15,9 +16,10 @@ type statisticsWorker struct {
 
 type seriesState struct {
 	definition *collectorpb.Series
-	window     *rollingWindow
+	window     rollingWindow
 }
 
+// stats worker initialization
 func newStatisticsWorker(bufferCapacity int) *statisticsWorker {
 	return &statisticsWorker{
 		observations: make(chan observation, bufferCapacity),
@@ -25,6 +27,7 @@ func newStatisticsWorker(bufferCapacity int) *statisticsWorker {
 	}
 }
 
+// creates a seriesState object and associate a seriesKey with it in the registry map
 func (w *statisticsWorker) registerSeries(
 	key seriesKey,
 	definition *collectorpb.Series,
@@ -37,6 +40,7 @@ func (w *statisticsWorker) registerSeries(
 	}
 }
 
+// check if series exists in this stats worker
 func (w *statisticsWorker) lookupSeries(
 	key seriesKey,
 ) (*collectorpb.Series, bool) {
@@ -51,6 +55,7 @@ func (w *statisticsWorker) lookupSeries(
 	return state.definition, true
 }
 
+// continous thread that processes observations
 func (w *statisticsWorker) run(ctx context.Context) {
 	for {
 		select {
@@ -69,5 +74,11 @@ func (w *statisticsWorker) run(ctx context.Context) {
 }
 
 func (w *statisticsWorker) process(observation observation) {
-	return
+	switch observation.(type) {
+	case countObservation:
+		// obs is countObservation
+	case recordObservation:
+		fmt.Printf("recordObservation type is currently not supported.")
+		return
+	}
 }
