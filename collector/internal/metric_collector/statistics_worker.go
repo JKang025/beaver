@@ -92,7 +92,23 @@ func (w *statisticsWorker) run(ctx context.Context) {
 func (w *statisticsWorker) process(observation observation) {
 	switch typedObs := observation.(type) {
 	case countObservation:
-		seriesState := w.series[typedObs.observationMetadata().key]
+		key := typedObs.observationMetadata().key
+
+		w.mutex.RLock()
+		seriesState, exists := w.series[key]
+		w.mutex.RUnlock()
+
+		if !exists {
+			fmt.Printf("series is not registered")
+			return
+		}
+
+		counterConfig := seriesState.definition.GetCounter()
+		if counterConfig == nil {
+			fmt.Printf("series is not configured as a counter")
+			return
+		}
+
 	case recordObservation:
 		fmt.Printf("recordObservation type is currently not supported.")
 		return
