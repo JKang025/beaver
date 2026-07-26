@@ -11,14 +11,16 @@ import (
 
 type metricsServer struct {
 	collectorpb.UnimplementedMetricsCollectorServer
-	registry    *seriesRegistry
-	statsWorker *statisticsWorker
+	registry *seriesRegistry
 }
 
-func NewMetricsServer() collectorpb.MetricsCollectorServer {
+const defaultObservationBufferCapacity = 1000
+
+func NewMetricsServer(ctx context.Context) collectorpb.MetricsCollectorServer {
+	registry := newSeriesRegistry(defaultObservationBufferCapacity)
+
 	return &metricsServer{
-		registry:    newSeriesRegistry(),
-		statsWorker: newStatisticsWorker(),
+		registry: registry,
 	}
 }
 
@@ -97,7 +99,7 @@ func (s *metricsServer) RegisterMetrics(
 			entity: entity,
 			series: seriesDefinition.GetName(),
 		}
-		s.registry.register(key, seriesDefinition, s.statsWorker)
+		s.registry.register(key, seriesDefinition)
 	}
 
 	return &collectorpb.RegisterMetricsResponse{}, nil

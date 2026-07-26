@@ -1,6 +1,7 @@
 package metriccollector
 
 import (
+	"context"
 	"sync"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
@@ -8,6 +9,7 @@ import (
 
 type seriesRegistry struct {
 	mutex           sync.RWMutex
+	statsWorker     *statisticsWorker
 	workersBySeries map[seriesKey]*statisticsWorker
 }
 
@@ -18,16 +20,17 @@ type seriesKey struct {
 	series string
 }
 
-func newSeriesRegistry() *seriesRegistry {
+func newSeriesRegistry(observationBufferCapacity int) *seriesRegistry {
 	return &seriesRegistry{
+		statsWorker:     newStatisticsWorker(observationBufferCapacity),
 		workersBySeries: make(map[seriesKey]*statisticsWorker),
 	}
 }
 
+// register a series to both the registry map and statsworker internals
 func (r *seriesRegistry) register(
 	key seriesKey,
 	definition *collectorpb.Series,
-	worker *statisticsWorker,
 ) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
@@ -36,11 +39,12 @@ func (r *seriesRegistry) register(
 		return false
 	}
 
-	worker.registerSeries(key, definition)
-	r.workersBySeries[key] = worker
+	r.statsWorker.registerSeries(key, definition)
+	r.workersBySeries[key] = r.statsWorker
 	return true
 }
 
+// lookup whether series is registered
 func (r *seriesRegistry) lookup(
 	key seriesKey,
 ) (*statisticsWorker, *collectorpb.Series, bool) {
@@ -59,9 +63,15 @@ func (r *seriesRegistry) lookup(
 	return worker, definition, true
 }
 
+// convert protobuf type to SeriesKey
 func convertMetricRefToSeriesKey(ref *collectorpb.MetricRef) seriesKey {
 	return seriesKey{
 		entity: ref.GetEntity(),
 		series: ref.GetSeries(),
 	}
+}
+
+// start all workers in the registry
+func (r *seriesRegistry) startWorkers(ctx context.Context) {
+	go r.statsWorker.run(ctx)
 }

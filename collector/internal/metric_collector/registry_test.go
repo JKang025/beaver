@@ -35,12 +35,11 @@ func TestConvertMetricRefToSeriesKeyAcceptsNilRef(t *testing.T) {
 }
 
 func TestSeriesRegistryRegisterAndLookup(t *testing.T) {
-	registry := newSeriesRegistry()
-	worker := newStatisticsWorker()
+	registry := newSeriesRegistry(0)
 	key := seriesKey{entity: "api", series: "requests"}
 	definition := newCounterSeries("requests")
 
-	if registered := registry.register(key, definition, worker); !registered {
+	if registered := registry.register(key, definition); !registered {
 		t.Fatal("register() = false, want true")
 	}
 
@@ -48,7 +47,7 @@ func TestSeriesRegistryRegisterAndLookup(t *testing.T) {
 	if !exists {
 		t.Fatal("lookup() did not find registered series")
 	}
-	if gotWorker != worker {
+	if gotWorker != registry.statsWorker {
 		t.Fatal("lookup() returned unexpected worker")
 	}
 	if gotDefinition != definition {
@@ -56,20 +55,17 @@ func TestSeriesRegistryRegisterAndLookup(t *testing.T) {
 	}
 }
 
-func TestSeriesRegistryRegisterPreservesFirstAssignment(t *testing.T) {
-	registry := newSeriesRegistry()
-	firstWorker := newStatisticsWorker()
-	secondWorker := newStatisticsWorker()
+func TestSeriesRegistryRegisterPreservesFirstDefinition(t *testing.T) {
+	registry := newSeriesRegistry(0)
 	key := seriesKey{entity: "api", series: "requests"}
 	firstDefinition := newCounterSeries("requests")
 
-	if registered := registry.register(key, firstDefinition, firstWorker); !registered {
+	if registered := registry.register(key, firstDefinition); !registered {
 		t.Fatal("first register() = false, want true")
 	}
 	if registered := registry.register(
 		key,
 		newGaugeSeries("requests"),
-		secondWorker,
 	); registered {
 		t.Fatal("duplicate register() = true, want false")
 	}
@@ -78,8 +74,8 @@ func TestSeriesRegistryRegisterPreservesFirstAssignment(t *testing.T) {
 	if !exists {
 		t.Fatal("lookup() did not find registered series")
 	}
-	if gotWorker != firstWorker {
-		t.Fatal("duplicate registration replaced worker")
+	if gotWorker != registry.statsWorker {
+		t.Fatal("lookup() returned unexpected worker")
 	}
 	if gotDefinition != firstDefinition {
 		t.Fatal("duplicate registration replaced definition")
@@ -87,7 +83,7 @@ func TestSeriesRegistryRegisterPreservesFirstAssignment(t *testing.T) {
 }
 
 func TestSeriesRegistryLookupMissing(t *testing.T) {
-	registry := newSeriesRegistry()
+	registry := newSeriesRegistry(0)
 
 	worker, definition, exists := registry.lookup(
 		seriesKey{entity: "api", series: "missing"},
@@ -106,8 +102,7 @@ func TestSeriesRegistryLookupMissing(t *testing.T) {
 func TestSeriesRegistrySupportsConcurrentRegistrationAndLookup(t *testing.T) {
 	const seriesCount = 100
 
-	registry := newSeriesRegistry()
-	worker := newStatisticsWorker()
+	registry := newSeriesRegistry(0)
 	var waitGroup sync.WaitGroup
 
 	for index := 0; index < seriesCount; index++ {
@@ -120,7 +115,7 @@ func TestSeriesRegistrySupportsConcurrentRegistrationAndLookup(t *testing.T) {
 		waitGroup.Add(2)
 		go func() {
 			defer waitGroup.Done()
-			registry.register(key, definition, worker)
+			registry.register(key, definition)
 		}()
 		go func() {
 			defer waitGroup.Done()

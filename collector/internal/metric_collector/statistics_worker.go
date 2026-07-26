@@ -1,6 +1,7 @@
 package metriccollector
 
 import (
+	"context"
 	"sync"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
@@ -17,9 +18,9 @@ type seriesState struct {
 	window     *rollingWindow
 }
 
-func newStatisticsWorker() *statisticsWorker {
+func newStatisticsWorker(bufferCapacity int) *statisticsWorker {
 	return &statisticsWorker{
-		observations: make(chan observation, 1000),
+		observations: make(chan observation, bufferCapacity),
 		series:       make(map[seriesKey]*seriesState),
 	}
 }
@@ -48,4 +49,25 @@ func (w *statisticsWorker) lookupSeries(
 	}
 
 	return state.definition, true
+}
+
+func (w *statisticsWorker) run(ctx context.Context) {
+	for {
+		select {
+		case observation, open := <-w.observations:
+			if !open {
+				return
+			}
+
+			w.process(observation)
+
+		case <-ctx.Done():
+			return
+		}
+
+	}
+}
+
+func (w *statisticsWorker) process(observation observation) {
+	return
 }

@@ -15,16 +15,17 @@ func TestNewMetricsServerInitializesRegistryAndWorker(t *testing.T) {
 	if server.registry == nil {
 		t.Fatal("registry is nil")
 	}
-	if server.statsWorker == nil {
+	if server.registry.statsWorker == nil {
 		t.Fatal("stats worker is nil")
 	}
-	if server.statsWorker.observations == nil {
+	if server.registry.statsWorker.observations == nil {
 		t.Fatal("stats worker observations channel is nil")
 	}
-	if cap(server.statsWorker.observations) != 0 {
+	if cap(server.registry.statsWorker.observations) != defaultObservationBufferCapacity {
 		t.Fatalf(
-			"stats worker observations channel capacity = %d, want 0",
-			cap(server.statsWorker.observations),
+			"stats worker observations channel capacity = %d, want %d",
+			cap(server.registry.statsWorker.observations),
+			defaultObservationBufferCapacity,
 		)
 	}
 }
@@ -299,7 +300,7 @@ func assertRegisteredSeries(
 	if !exists {
 		t.Fatalf("series %+v is not registered", key)
 	}
-	if worker != server.statsWorker {
+	if worker != server.registry.statsWorker {
 		t.Fatalf("series %+v assigned to unexpected worker", key)
 	}
 	if definition != wantDefinition {
