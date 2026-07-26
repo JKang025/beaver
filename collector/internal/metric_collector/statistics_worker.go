@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
 )
@@ -18,6 +19,11 @@ type seriesState struct {
 	definition *collectorpb.Series
 	window     rollingWindow
 }
+
+const (
+	defaultWindowDuration = 60 * time.Second
+	defaultWindowStep     = time.Second
+)
 
 // stats worker initialization
 func newStatisticsWorker(bufferCapacity int) *statisticsWorker {
@@ -35,8 +41,18 @@ func (w *statisticsWorker) registerSeries(
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
+	window := rollingWindow{
+		metadata: windowMetadata{
+			duration:     defaultWindowDuration,
+			step:         defaultWindowStep,
+			currentStart: time.Time{},
+		},
+		observations: make([]observation, 0),
+	}
+
 	w.series[key] = &seriesState{
 		definition: definition,
+		window:     window,
 	}
 }
 
@@ -76,7 +92,7 @@ func (w *statisticsWorker) run(ctx context.Context) {
 func (w *statisticsWorker) process(observation observation) {
 	switch typedObs := observation.(type) {
 	case countObservation:
-		// obs is countObservation
+		seriesState := w.series[typedObs.observationMetadata().key]
 	case recordObservation:
 		fmt.Printf("recordObservation type is currently not supported.")
 		return
