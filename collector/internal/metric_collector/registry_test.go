@@ -15,9 +15,9 @@ func TestConvertMetricRefToSeriesKey(t *testing.T) {
 	}
 
 	got := convertMetricRefToSeriesKey(ref)
-	want := SeriesKey{
-		Entity: "api",
-		Series: "requests",
+	want := seriesKey{
+		entity: "api",
+		series: "requests",
 	}
 
 	if got != want {
@@ -27,7 +27,7 @@ func TestConvertMetricRefToSeriesKey(t *testing.T) {
 
 func TestConvertMetricRefToSeriesKeyAcceptsNilRef(t *testing.T) {
 	got := convertMetricRefToSeriesKey(nil)
-	want := SeriesKey{}
+	want := seriesKey{}
 
 	if got != want {
 		t.Fatalf("convertMetricRefToSeriesKey(nil) = %+v, want %+v", got, want)
@@ -37,14 +37,14 @@ func TestConvertMetricRefToSeriesKeyAcceptsNilRef(t *testing.T) {
 func TestSeriesRegistryRegisterAndLookup(t *testing.T) {
 	registry := newSeriesRegistry()
 	worker := newStatisticsWorker()
-	seriesKey := SeriesKey{Entity: "api", Series: "requests"}
+	key := seriesKey{entity: "api", series: "requests"}
 	definition := newCounterSeries("requests")
 
-	if registered := registry.register(seriesKey, definition, worker); !registered {
+	if registered := registry.register(key, definition, worker); !registered {
 		t.Fatal("register() = false, want true")
 	}
 
-	gotWorker, gotDefinition, exists := registry.lookup(seriesKey)
+	gotWorker, gotDefinition, exists := registry.lookup(key)
 	if !exists {
 		t.Fatal("lookup() did not find registered series")
 	}
@@ -60,21 +60,21 @@ func TestSeriesRegistryRegisterPreservesFirstAssignment(t *testing.T) {
 	registry := newSeriesRegistry()
 	firstWorker := newStatisticsWorker()
 	secondWorker := newStatisticsWorker()
-	seriesKey := SeriesKey{Entity: "api", Series: "requests"}
+	key := seriesKey{entity: "api", series: "requests"}
 	firstDefinition := newCounterSeries("requests")
 
-	if registered := registry.register(seriesKey, firstDefinition, firstWorker); !registered {
+	if registered := registry.register(key, firstDefinition, firstWorker); !registered {
 		t.Fatal("first register() = false, want true")
 	}
 	if registered := registry.register(
-		seriesKey,
+		key,
 		newGaugeSeries("requests"),
 		secondWorker,
 	); registered {
 		t.Fatal("duplicate register() = true, want false")
 	}
 
-	gotWorker, gotDefinition, exists := registry.lookup(seriesKey)
+	gotWorker, gotDefinition, exists := registry.lookup(key)
 	if !exists {
 		t.Fatal("lookup() did not find registered series")
 	}
@@ -90,7 +90,7 @@ func TestSeriesRegistryLookupMissing(t *testing.T) {
 	registry := newSeriesRegistry()
 
 	worker, definition, exists := registry.lookup(
-		SeriesKey{Entity: "api", Series: "missing"},
+		seriesKey{entity: "api", series: "missing"},
 	)
 	if exists {
 		t.Fatal("lookup() found unregistered series")
@@ -111,39 +111,39 @@ func TestSeriesRegistrySupportsConcurrentRegistrationAndLookup(t *testing.T) {
 	var waitGroup sync.WaitGroup
 
 	for index := 0; index < seriesCount; index++ {
-		seriesKey := SeriesKey{
-			Entity: "api",
-			Series: fmt.Sprintf("series-%d", index),
+		key := seriesKey{
+			entity: "api",
+			series: fmt.Sprintf("series-%d", index),
 		}
-		definition := newCounterSeries(seriesKey.Series)
+		definition := newCounterSeries(key.series)
 
 		waitGroup.Add(2)
 		go func() {
 			defer waitGroup.Done()
-			registry.register(seriesKey, definition, worker)
+			registry.register(key, definition, worker)
 		}()
 		go func() {
 			defer waitGroup.Done()
-			registry.lookup(seriesKey)
+			registry.lookup(key)
 		}()
 	}
 
 	waitGroup.Wait()
 
 	for index := 0; index < seriesCount; index++ {
-		seriesKey := SeriesKey{
-			Entity: "api",
-			Series: fmt.Sprintf("series-%d", index),
+		key := seriesKey{
+			entity: "api",
+			series: fmt.Sprintf("series-%d", index),
 		}
-		_, definition, exists := registry.lookup(seriesKey)
+		_, definition, exists := registry.lookup(key)
 		if !exists {
-			t.Fatalf("lookup() did not find series %+v", seriesKey)
+			t.Fatalf("lookup() did not find series %+v", key)
 		}
-		if definition.GetName() != seriesKey.Series {
+		if definition.GetName() != key.series {
 			t.Fatalf(
 				"lookup() definition name = %q, want %q",
 				definition.GetName(),
-				seriesKey.Series,
+				key.series,
 			)
 		}
 	}

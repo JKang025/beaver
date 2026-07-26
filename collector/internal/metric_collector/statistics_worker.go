@@ -9,7 +9,7 @@ import (
 type statisticsWorker struct {
 	mutex        sync.RWMutex
 	observations chan observation
-	series       map[SeriesKey]*seriesState
+	series       map[seriesKey]*seriesState
 }
 
 type seriesState struct {
@@ -20,29 +20,29 @@ type seriesState struct {
 func newStatisticsWorker() *statisticsWorker {
 	return &statisticsWorker{
 		observations: make(chan observation, 1000),
-		series:       make(map[SeriesKey]*seriesState),
+		series:       make(map[seriesKey]*seriesState),
 	}
 }
 
 func (w *statisticsWorker) registerSeries(
-	seriesKey SeriesKey,
+	key seriesKey,
 	definition *collectorpb.Series,
 ) {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
-	w.series[seriesKey] = &seriesState{
+	w.series[key] = &seriesState{
 		definition: definition,
 	}
 }
 
 func (w *statisticsWorker) lookupSeries(
-	seriesKey SeriesKey,
+	key seriesKey,
 ) (*collectorpb.Series, bool) {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
 
-	state, exists := w.series[seriesKey]
+	state, exists := w.series[key]
 	if !exists {
 		return nil, false
 	}

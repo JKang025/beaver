@@ -2,13 +2,13 @@ package metriccollector
 
 import "time"
 
-type WindowMetadata struct {
-	Duration     time.Duration
-	Step         time.Duration
-	CurrentStart time.Time
+type windowMetadata struct {
+	duration     time.Duration
+	step         time.Duration
+	currentStart time.Time
 }
 
 type rollingWindow struct {
-	metadata     WindowMetadata
+	metadata     windowMetadata
 	observations []observation
 }

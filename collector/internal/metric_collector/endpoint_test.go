@@ -42,8 +42,8 @@ func TestRegisterMetricsAssignsSeriesToWorker(t *testing.T) {
 		},
 	})
 
-	assertRegisteredSeries(t, server, SeriesKey{Entity: "api", Series: "requests"}, requests)
-	assertRegisteredSeries(t, server, SeriesKey{Entity: "api", Series: "connections"}, connections)
+	assertRegisteredSeries(t, server, seriesKey{entity: "api", series: "requests"}, requests)
+	assertRegisteredSeries(t, server, seriesKey{entity: "api", series: "connections"}, connections)
 }
 
 func TestRegisterMetricsSupportsMultipleEntities(t *testing.T) {
@@ -60,11 +60,11 @@ func TestRegisterMetricsSupportsMultipleEntities(t *testing.T) {
 		Series: []*collectorpb.Series{databaseRequests},
 	})
 
-	assertRegisteredSeries(t, server, SeriesKey{Entity: "api", Series: "requests"}, apiRequests)
+	assertRegisteredSeries(t, server, seriesKey{entity: "api", series: "requests"}, apiRequests)
 	assertRegisteredSeries(
 		t,
 		server,
-		SeriesKey{Entity: "database", Series: "requests"},
+		seriesKey{entity: "database", series: "requests"},
 		databaseRequests,
 	)
 }
@@ -88,7 +88,7 @@ func TestRegisterMetricsIgnoresExistingSeries(t *testing.T) {
 	assertRegisteredSeries(
 		t,
 		server,
-		SeriesKey{Entity: "api", Series: "requests"},
+		seriesKey{entity: "api", series: "requests"},
 		existingSeries,
 	)
 }
@@ -108,7 +108,7 @@ func TestRegisterMetricsIgnoresDuplicateSeriesInRequest(t *testing.T) {
 	assertRegisteredSeries(
 		t,
 		server,
-		SeriesKey{Entity: "api", Series: "requests"},
+		seriesKey{entity: "api", series: "requests"},
 		firstSeries,
 	)
 }
@@ -290,20 +290,20 @@ func registerMetrics(
 func assertRegisteredSeries(
 	t *testing.T,
 	server *metricsServer,
-	seriesKey SeriesKey,
+	key seriesKey,
 	wantDefinition *collectorpb.Series,
 ) {
 	t.Helper()
 
-	worker, definition, exists := server.registry.lookup(seriesKey)
+	worker, definition, exists := server.registry.lookup(key)
 	if !exists {
-		t.Fatalf("series %+v is not registered", seriesKey)
+		t.Fatalf("series %+v is not registered", key)
 	}
 	if worker != server.statsWorker {
-		t.Fatalf("series %+v assigned to unexpected worker", seriesKey)
+		t.Fatalf("series %+v assigned to unexpected worker", key)
 	}
 	if definition != wantDefinition {
-		t.Fatalf("series %+v definition was replaced", seriesKey)
+		t.Fatalf("series %+v definition was replaced", key)
 	}
 }
 

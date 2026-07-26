@@ -2,35 +2,35 @@ package metriccollector
 
 import "time"
 
-type ObservationMetadata struct {
-	SeriesKey  SeriesKey
-	ObservedAt time.Time
-	ReceivedAt time.Time
+type observationMetadata struct {
+	key        seriesKey
+	observedAt time.Time
+	receivedAt time.Time
 }
 
 type observation interface {
-	metadata() ObservationMetadata
+	observationMetadata() observationMetadata
 }
 
-type CountObservation struct {
-	Metadata ObservationMetadata
-	Value    int64
+type countObservation struct {
+	metadata observationMetadata
+	value    int64
 }
 
-type RecordObservation struct {
-	Metadata ObservationMetadata
-	Value    float64
+type recordObservation struct {
+	metadata observationMetadata
+	value    float64
 }
 
-func (o CountObservation) metadata() ObservationMetadata {
-	return o.Metadata
+func (o countObservation) observationMetadata() observationMetadata {
+	return o.metadata
 }
 
-func (o RecordObservation) metadata() ObservationMetadata {
-	return o.Metadata
+func (o recordObservation) observationMetadata() observationMetadata {
+	return o.metadata
 }
 
 var (
-	_ observation = CountObservation{}
-	_ observation = RecordObservation{}
+	_ observation = countObservation{}
+	_ observation = recordObservation{}
 )

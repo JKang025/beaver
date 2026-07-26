@@ -27,26 +27,26 @@ func (s *metricsServer) CountMetric(
 	ctx context.Context,
 	request *collectorpb.CountMetricRequest,
 ) (*collectorpb.CountMetricResponse, error) {
-	seriesKey := convertMetricRefToSeriesKey(request.GetMetric())
+	key := convertMetricRefToSeriesKey(request.GetMetric())
 
-	statsWorker, _, exists := s.registry.lookup(seriesKey)
+	statsWorker, _, exists := s.registry.lookup(key)
 	if !exists {
 		return nil, status.Errorf(
 			codes.NotFound,
 			"series %q for entity %q is not registered",
-			seriesKey.Series,
-			seriesKey.Entity,
+			key.series,
+			key.entity,
 		)
 	}
 
 	now := time.Now()
-	observation := CountObservation{
-		Metadata: ObservationMetadata{
-			SeriesKey:  seriesKey,
-			ObservedAt: now,
-			ReceivedAt: now, // TODO: edit RPC call to include true client side ObservedAt
+	observation := countObservation{
+		metadata: observationMetadata{
+			key:        key,
+			observedAt: now,
+			receivedAt: now, // TODO: edit RPC call to include true client side observedAt
 		},
-		Value: request.GetValue(),
+		value: request.GetValue(),
 	}
 
 	select {
@@ -93,11 +93,11 @@ func (s *metricsServer) RegisterMetrics(
 	}
 
 	for _, seriesDefinition := range seriesDefinitions {
-		seriesKey := SeriesKey{
-			Entity: entity,
-			Series: seriesDefinition.GetName(),
+		key := seriesKey{
+			entity: entity,
+			series: seriesDefinition.GetName(),
 		}
-		s.registry.register(seriesKey, seriesDefinition, s.statsWorker)
+		s.registry.register(key, seriesDefinition, s.statsWorker)
 	}
 
 	return &collectorpb.RegisterMetricsResponse{}, nil
