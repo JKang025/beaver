@@ -1,39 +1,64 @@
 package metriccollector
 
 import (
-	"time"
+	"sync"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-type WindowMetadata struct {
-	Duration     time.Duration
-	Step         time.Duration
-	CurrentStart time.Time
+type seriesRegistry struct {
+	mutex           sync.RWMutex
+	workersBySeries map[SeriesKey]*statisticsWorker
 }
 
-type rollingWindow struct {
-	metadata     WindowMetadata
-	observations []observation
-}
-
-// each statisticsWorker gets a stream of observation, where it then keeps series specific info including rolling window
-type statisticsWorker struct {
-	observations <-chan observation
-	series       map[SeriesKey]*seriesState
-}
-
-// require this pure struct to act as a key, which is why we don't use collectorpb.MetricRef
+// SeriesKey is comparable, unlike the generated protobuf MetricRef, so it can be
+// used as a map key.
 type SeriesKey struct {
 	Entity string
 	Series string
 }
 
-type seriesState struct {
-	definition *collectorpb.Series
-	window     *rollingWindow
+func newSeriesRegistry() *seriesRegistry {
+	return &seriesRegistry{
+		workersBySeries: make(map[SeriesKey]*statisticsWorker),
+	}
+}
+
+func (r *seriesRegistry) register(
+	seriesKey SeriesKey,
+	definition *collectorpb.Series,
+	worker *statisticsWorker,
+) bool {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if _, exists := r.workersBySeries[seriesKey]; exists {
+		return false
+	}
+
+	worker.registerSeries(seriesKey, definition)
+	r.workersBySeries[seriesKey] = worker
+	return true
+}
+
+func (r *seriesRegistry) lookup(
+	seriesKey SeriesKey,
+) (*statisticsWorker, *collectorpb.Series, bool) {
+	r.mutex.RLock()
+	worker, exists := r.workersBySeries[seriesKey]
+	r.mutex.RUnlock()
+	if !exists {
+		return nil, nil, false
+	}
+
+	definition, exists := worker.lookupSeries(seriesKey)
+	if !exists {
+		return nil, nil, false
+	}
+
+	return worker, definition, true
 }
 
 func convertMetricRefToSeriesKey(ref *collectorpb.MetricRef) SeriesKey {
@@ -46,23 +71,15 @@ func convertMetricRefToSeriesKey(ref *collectorpb.MetricRef) SeriesKey {
 func (s *metricsServer) lookupSeries(
 	seriesKey SeriesKey,
 ) (*collectorpb.Series, error) {
-	s.metricsMutex.RLock()
-	defer s.metricsMutex.RUnlock()
-
-	entityName := seriesKey.Entity
-	seriesName := seriesKey.Series
-	seriesMap, entityExists := s.metrics[entityName]
-
-	if !entityExists {
-		return nil, status.Errorf(codes.NotFound, "Entity %q is not registered", entityName)
+	_, definition, exists := s.registry.lookup(seriesKey)
+	if !exists {
+		return nil, status.Errorf(
+			codes.NotFound,
+			"series %q for entity %q is not registered",
+			seriesKey.Series,
+			seriesKey.Entity,
+		)
 	}
 
-	series, seriesExists := seriesMap[seriesName]
-
-	if !seriesExists {
-		return nil, status.Errorf(codes.NotFound, "Series %q is not registered", seriesName)
-	}
-
-	return series, nil
-
+	return definition, nil
 }

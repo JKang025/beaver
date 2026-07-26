@@ -2,7 +2,6 @@ package metriccollector
 
 import (
 	"context"
-	"sync"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
 	"google.golang.org/grpc/codes"
@@ -11,17 +10,14 @@ import (
 
 type metricsServer struct {
 	collectorpb.UnimplementedMetricsCollectorServer
-	// reistry related
-	metricsMutex sync.RWMutex
-	metrics      map[string]map[string]*collectorpb.Series // entitiy : {series: series_config_obj}
-
-	observations chan observation
-	statsWorker  *statisticsWorker
+	registry    *seriesRegistry
+	statsWorker *statisticsWorker
 }
 
 func NewMetricsServer() collectorpb.MetricsCollectorServer {
 	return &metricsServer{
-		metrics: make(map[string]map[string]*collectorpb.Series),
+		registry:    newSeriesRegistry(),
+		statsWorker: newStatisticsWorker(),
 	}
 }
 
@@ -76,14 +72,7 @@ func (s *metricsServer) RegisterMetrics(
 	request *collectorpb.RegisterMetricsRequest,
 ) (*collectorpb.RegisterMetricsResponse, error) {
 	entity := request.GetEntity()
-	if entity == "" {
-		return nil, status.Error(codes.InvalidArgument, "entity is required")
-	}
-
 	seriesDefinitions := request.GetSeries()
-	if len(seriesDefinitions) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "at least one series is required")
-	}
 
 	// validating basic seriesDefinition contract
 	for _, seriesDefinition := range seriesDefinitions {
@@ -100,24 +89,12 @@ func (s *metricsServer) RegisterMetrics(
 		}
 	}
 
-	s.metricsMutex.Lock()
-	defer s.metricsMutex.Unlock()
-
-	registeredSeries, entityExists := s.metrics[entity]
-
-	if !entityExists {
-		registeredSeries = make(map[string]*collectorpb.Series)
-		s.metrics[entity] = registeredSeries
-	}
-
 	for _, seriesDefinition := range seriesDefinitions {
-		seriesName := seriesDefinition.GetName()
-		_, seriesExists := registeredSeries[seriesName]
-		if seriesExists {
-			continue
+		seriesKey := SeriesKey{
+			Entity: entity,
+			Series: seriesDefinition.GetName(),
 		}
-
-		registeredSeries[seriesName] = seriesDefinition
+		s.registry.register(seriesKey, seriesDefinition, s.statsWorker)
 	}
 
 	return &collectorpb.RegisterMetricsResponse{}, nil

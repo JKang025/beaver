@@ -21,3 +21,16 @@ type RecordObservation struct {
 	Metadata ObservationMetadata
 	Value    float64
 }
+
+func (o CountObservation) metadata() ObservationMetadata {
+	return o.Metadata
+}
+
+func (o RecordObservation) metadata() ObservationMetadata {
+	return o.Metadata
+}
+
+var (
+	_ observation = CountObservation{}
+	_ observation = RecordObservation{}
+)
