@@ -1,14 +1,39 @@
 package metriccollector
 
 import (
+	"time"
+
 	collectorpb "github.com/JKang025/beaver/proto/collector"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-type registeredSeries struct {
+type WindowMetadata struct {
+	Duration     time.Duration
+	Step         time.Duration
+	CurrentStart time.Time
+}
+
+type rollingWindow struct {
+	metadata     WindowMetadata
+	observations []observation
+}
+
+// each statisticsWorker gets a stream of observation, where it then keeps series specific info including rolling window
+type statisticsWorker struct {
+	observations <-chan observation
+	series       map[SeriesKey]*seriesState
+}
+
+// require this pure struct to act as a key, which is why we don't use collectorpb.MetricRef
+type SeriesKey struct {
+	Entity string
+	Series string
+}
+
+type seriesState struct {
 	definition *collectorpb.Series
-	window     seriesWindow
+	window     *rollingWindow
 }
 
 func convertMetricRefToSeriesKey(ref *collectorpb.MetricRef) SeriesKey {

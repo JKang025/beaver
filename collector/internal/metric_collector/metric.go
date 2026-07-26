@@ -2,16 +2,14 @@ package metriccollector
 
 import "time"
 
-type SeriesKey struct {
-	Entity string
-	Series string
+type ObservationMetadata struct {
+	SeriesKey  SeriesKey
+	ObservedAt time.Time
+	ReceivedAt time.Time
 }
 
-type ObservationMetadata struct {
-	SeriesKey   SeriesKey
-	ObservedAt  time.Time
-	ReceivedAt  time.Time
-	BucketStart time.Time
+type observation interface {
+	metadata() ObservationMetadata
 }
 
 type CountObservation struct {
