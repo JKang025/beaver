@@ -19,7 +19,7 @@ type seriesState struct {
 
 func newStatisticsWorker() *statisticsWorker {
 	return &statisticsWorker{
-		observations: make(chan observation),
+		observations: make(chan observation, 1000),
 		series:       make(map[SeriesKey]*seriesState),
 	}
 }

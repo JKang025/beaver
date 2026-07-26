@@ -2,6 +2,7 @@ package metriccollector
 
 import (
 	"context"
+	"time"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
 	"google.golang.org/grpc/codes"
@@ -27,20 +28,34 @@ func (s *metricsServer) CountMetric(
 	request *collectorpb.CountMetricRequest,
 ) (*collectorpb.CountMetricResponse, error) {
 	seriesKey := convertMetricRefToSeriesKey(request.GetMetric())
-	series, err := s.lookupSeries(seriesKey)
-	if err != nil {
-		return nil, err
-	}
-	if series.GetCounter() == nil {
+
+	statsWorker, _, exists := s.registry.lookup(seriesKey)
+	if !exists {
 		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"series %q is not a counter",
-			request.GetMetric().GetSeries(),
+			codes.NotFound,
+			"series %q for entity %q is not registered",
+			seriesKey.Series,
+			seriesKey.Entity,
 		)
 	}
 
-	// TODO: Add request.GetValue() to the counter accumulator.
-	return &collectorpb.CountMetricResponse{}, nil
+	now := time.Now()
+	observation := CountObservation{
+		Metadata: ObservationMetadata{
+			SeriesKey:  seriesKey,
+			ObservedAt: now,
+			ReceivedAt: now, // TODO: edit RPC call to include true client side ObservedAt
+		},
+		Value: request.GetValue(),
+	}
+
+	select {
+	case statsWorker.observations <- observation:
+		return &collectorpb.CountMetricResponse{}, nil
+
+	case <-ctx.Done():
+		return nil, status.FromContextError(ctx.Err()).Err()
+	}
 }
 
 // RecordMetric records a floating-point observation in a gauge or sample series.
@@ -48,18 +63,6 @@ func (s *metricsServer) RecordMetric(
 	ctx context.Context,
 	request *collectorpb.RecordMetricRequest,
 ) (*collectorpb.RecordMetricResponse, error) {
-	seriesKey := convertMetricRefToSeriesKey(request.GetMetric())
-	series, err := s.lookupSeries(seriesKey)
-	if err != nil {
-		return nil, err
-	}
-	if series.GetCounter() != nil {
-		return nil, status.Errorf(
-			codes.InvalidArgument,
-			"series %q is a counter; use CountMetric",
-			request.GetMetric().GetSeries(),
-		)
-	}
 
 	// TODO: Record request.GetValue() in the gauge or sample accumulator.
 	return &collectorpb.RecordMetricResponse{}, nil

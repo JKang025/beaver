@@ -4,8 +4,6 @@ import (
 	"sync"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type seriesRegistry struct {
@@ -66,20 +64,4 @@ func convertMetricRefToSeriesKey(ref *collectorpb.MetricRef) SeriesKey {
 		Entity: ref.GetEntity(),
 		Series: ref.GetSeries(),
 	}
-}
-
-func (s *metricsServer) lookupSeries(
-	seriesKey SeriesKey,
-) (*collectorpb.Series, error) {
-	_, definition, exists := s.registry.lookup(seriesKey)
-	if !exists {
-		return nil, status.Errorf(
-			codes.NotFound,
-			"series %q for entity %q is not registered",
-			seriesKey.Series,
-			seriesKey.Entity,
-		)
-	}
-
-	return definition, nil
 }
