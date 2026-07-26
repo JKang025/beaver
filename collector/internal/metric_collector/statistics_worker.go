@@ -74,7 +74,7 @@ func (w *statisticsWorker) run(ctx context.Context) {
 }
 
 func (w *statisticsWorker) process(observation observation) {
-	switch observation.(type) {
+	switch typedObs := observation.(type) {
 	case countObservation:
 		// obs is countObservation
 	case recordObservation:
