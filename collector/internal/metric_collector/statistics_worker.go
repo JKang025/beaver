@@ -9,12 +9,14 @@ import (
 	collectorpb "github.com/JKang025/beaver/proto/collector"
 )
 
+// statisticsWorker aggregates observations for its assigned series.
 type statisticsWorker struct {
 	mutex        sync.RWMutex
 	observations chan observation
 	series       map[seriesKey]*seriesState
 }
 
+// seriesState contains worker-owned aggregation state for one series.
 type seriesState struct {
 	definition *collectorpb.Series
 	window     rollingWindow
@@ -25,7 +27,7 @@ const (
 	defaultWindowStep     = time.Second
 )
 
-// stats worker initialization
+// newStatisticsWorker creates a worker with a bounded observation queue.
 func newStatisticsWorker(bufferCapacity int) *statisticsWorker {
 	return &statisticsWorker{
 		observations: make(chan observation, bufferCapacity),
@@ -33,7 +35,7 @@ func newStatisticsWorker(bufferCapacity int) *statisticsWorker {
 	}
 }
 
-// creates a seriesState object and associate a seriesKey with it in the registry map
+// registerSeries initializes the processing state for a series.
 func (w *statisticsWorker) registerSeries(
 	key seriesKey,
 	definition *collectorpb.Series,
@@ -58,11 +60,11 @@ func (w *statisticsWorker) registerSeries(
 			aggregations:    definition.GetCounter().GetAggregations(),
 		}
 
-	case *collectorpb.Series_Gauge:
-		return fmt.Errorf("not implemented")
+	case *collectorpb.Series_Gauge, *collectorpb.Series_Sample:
+		// Their processing state will be added with RecordMetric support.
 
-	case *collectorpb.Series_Sample:
-		return fmt.Errorf("not implemented")
+	default:
+		return fmt.Errorf("unsupported series config %T", definition.GetConfig())
 	}
 
 	w.series[key] = &seriesState{
@@ -73,22 +75,7 @@ func (w *statisticsWorker) registerSeries(
 	return nil
 }
 
-// check if series exists in this stats worker
-func (w *statisticsWorker) lookupSeries(
-	key seriesKey,
-) (*collectorpb.Series, bool) {
-	w.mutex.RLock()
-	defer w.mutex.RUnlock()
-
-	state, exists := w.series[key]
-	if !exists {
-		return nil, false
-	}
-
-	return state.definition, true
-}
-
-// continous thread that processes observations
+// run processes observations until its queue closes or the context is canceled.
 func (w *statisticsWorker) run(ctx context.Context) {
 	for {
 		select {
@@ -129,12 +116,11 @@ func (w *statisticsWorker) process(observation observation) {
 		counterWindow, ok := seriesState.window.(*countRollingWindow)
 		if !ok {
 			fmt.Printf("counter series has non-counter window type")
+			return
 		}
 
-		datapoints, hasData := counterWindow.pushCount(typedObs)
-		if hasData {
-
-		}
+		// Completed datapoints will be handed to the metric store in a later change.
+		counterWindow.pushCount(typedObs)
 
 	case recordObservation:
 		fmt.Printf("recordObservation type is currently not supported.")

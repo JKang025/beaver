@@ -1,16 +1,21 @@
 package metriccollector
 
 import (
-	"context"
 	"sync"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
 )
 
+// registeredSeries associates a series definition with its assigned worker.
+type registeredSeries struct {
+	definition *collectorpb.Series
+	worker     *statisticsWorker
+}
+
+// seriesRegistry indexes registered series for validation and worker routing.
 type seriesRegistry struct {
-	mutex           sync.RWMutex
-	statsWorker     *statisticsWorker
-	workersBySeries map[seriesKey]*statisticsWorker
+	mutex  sync.RWMutex
+	series map[seriesKey]registeredSeries
 }
 
 // seriesKey is comparable, unlike the generated protobuf MetricRef, so it can be
@@ -20,51 +25,44 @@ type seriesKey struct {
 	series string
 }
 
-func newSeriesRegistry(observationBufferCapacity int) *seriesRegistry {
+func newSeriesRegistry() *seriesRegistry {
 	return &seriesRegistry{
-		statsWorker:     newStatisticsWorker(observationBufferCapacity),
-		workersBySeries: make(map[seriesKey]*statisticsWorker),
+		series: make(map[seriesKey]registeredSeries),
 	}
 }
 
-// register a series to both the registry map and statsworker internals
+// register associates a new series with its definition and assigned worker.
 func (r *seriesRegistry) register(
 	key seriesKey,
 	definition *collectorpb.Series,
-) (bool, error) {
+	worker *statisticsWorker,
+) bool {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	if _, exists := r.workersBySeries[key]; exists {
-		return false, nil
+	if _, exists := r.series[key]; exists {
+		return false
 	}
 
-	err := r.statsWorker.registerSeries(key, definition)
-	if err != nil {
-		return false, err
+	r.series[key] = registeredSeries{
+		definition: definition,
+		worker:     worker,
 	}
-
-	r.workersBySeries[key] = r.statsWorker
-	return true, nil
+	return true
 }
 
-// lookup whether series is registered
+// lookup returns a series's assigned worker and registered definition.
 func (r *seriesRegistry) lookup(
 	key seriesKey,
 ) (*statisticsWorker, *collectorpb.Series, bool) {
 	r.mutex.RLock()
-	worker, exists := r.workersBySeries[key]
+	registered, exists := r.series[key]
 	r.mutex.RUnlock()
 	if !exists {
 		return nil, nil, false
 	}
 
-	definition, exists := worker.lookupSeries(key)
-	if !exists {
-		return nil, nil, false
-	}
-
-	return worker, definition, true
+	return registered.worker, registered.definition, true
 }
 
 // convert protobuf type to SeriesKey
@@ -73,9 +71,4 @@ func convertMetricRefToSeriesKey(ref *collectorpb.MetricRef) seriesKey {
 		entity: ref.GetEntity(),
 		series: ref.GetSeries(),
 	}
-}
-
-// start all workers in the registry
-func (r *seriesRegistry) startWorkers(ctx context.Context) {
-	go r.statsWorker.run(ctx)
 }

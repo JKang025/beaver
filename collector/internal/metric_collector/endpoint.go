@@ -3,6 +3,7 @@ package metriccollector
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
@@ -10,19 +11,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// metricsServer validates metric RPCs and routes observations to workers.
 type metricsServer struct {
 	collectorpb.UnimplementedMetricsCollectorServer
-	registry *seriesRegistry
+
+	registrationMutex sync.Mutex
+	registry          *seriesRegistry
+	workerManager     *statisticsWorkerManager
 }
 
 const defaultObservationBufferCapacity = 1000
 
 func NewMetricsServer(ctx context.Context) collectorpb.MetricsCollectorServer {
-	registry := newSeriesRegistry(defaultObservationBufferCapacity)
+	registry := newSeriesRegistry()
+	workerManager := newStatisticsWorkerManager(defaultObservationBufferCapacity)
 
-	registry.startWorkers(ctx)
+	workerManager.start(ctx)
 	return &metricsServer{
-		registry: registry,
+		registry:      registry,
+		workerManager: workerManager,
 	}
 }
 
@@ -33,11 +40,19 @@ func (s *metricsServer) CountMetric(
 ) (*collectorpb.CountMetricResponse, error) {
 	key := convertMetricRefToSeriesKey(request.GetMetric())
 
-	statsWorker, _, exists := s.registry.lookup(key)
+	statsWorker, definition, exists := s.registry.lookup(key)
 	if !exists {
 		return nil, status.Errorf(
 			codes.NotFound,
 			"series %q for entity %q is not registered",
+			key.series,
+			key.entity,
+		)
+	}
+	if definition.GetCounter() == nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"series %q for entity %q is not configured as a counter",
 			key.series,
 			key.entity,
 		)
@@ -67,9 +82,43 @@ func (s *metricsServer) RecordMetric(
 	ctx context.Context,
 	request *collectorpb.RecordMetricRequest,
 ) (*collectorpb.RecordMetricResponse, error) {
+	key := convertMetricRefToSeriesKey(request.GetMetric())
 
-	// TODO: Record request.GetValue() in the gauge or sample accumulator.
-	return &collectorpb.RecordMetricResponse{}, nil
+	statsWorker, definition, exists := s.registry.lookup(key)
+	if !exists {
+		return nil, status.Errorf(
+			codes.NotFound,
+			"series %q for entity %q is not registered",
+			key.series,
+			key.entity,
+		)
+	}
+	if definition.GetGauge() == nil && definition.GetSample() == nil {
+		return nil, status.Errorf(
+			codes.InvalidArgument,
+			"series %q for entity %q does not accept recorded values",
+			key.series,
+			key.entity,
+		)
+	}
+
+	now := time.Now()
+	observation := recordObservation{
+		metadata: observationMetadata{
+			key:        key,
+			observedAt: now,
+			receivedAt: now,
+		},
+		value: request.GetValue(),
+	}
+
+	select {
+	case statsWorker.observations <- observation:
+		return &collectorpb.RecordMetricResponse{}, nil
+
+	case <-ctx.Done():
+		return nil, status.FromContextError(ctx.Err()).Err()
+	}
 }
 
 // RegisterMetrics registers metric series for an entity.
@@ -81,7 +130,14 @@ func (s *metricsServer) RegisterMetrics(
 	entity := request.GetEntity()
 	seriesDefinitions := request.GetSeries()
 
-	// validating basic seriesDefinition contract
+	if entity == "" {
+		return nil, status.Error(codes.InvalidArgument, "entity is required")
+	}
+	if len(seriesDefinitions) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "at least one series is required")
+	}
+
+	// Validate the complete request before registering any series.
 	for _, seriesDefinition := range seriesDefinitions {
 		seriesName := seriesDefinition.GetName()
 		if seriesName == "" {
@@ -101,11 +157,31 @@ func (s *metricsServer) RegisterMetrics(
 			entity: entity,
 			series: seriesDefinition.GetName(),
 		}
-		_, err := s.registry.register(key, seriesDefinition)
-		if err != nil {
+		if err := s.registerSeries(key, seriesDefinition); err != nil {
 			fmt.Printf("failed to register series %s: %v\n", key.series, err)
 		}
 	}
 
 	return &collectorpb.RegisterMetricsResponse{}, nil
+}
+
+// registerSeries atomically initializes and publishes a series registration.
+func (s *metricsServer) registerSeries(
+	key seriesKey,
+	definition *collectorpb.Series,
+) error {
+	s.registrationMutex.Lock()
+	defer s.registrationMutex.Unlock()
+
+	if _, _, exists := s.registry.lookup(key); exists {
+		return nil
+	}
+
+	worker, err := s.workerManager.assignSeries(key, definition)
+	if err != nil {
+		return err
+	}
+
+	s.registry.register(key, definition, worker)
+	return nil
 }

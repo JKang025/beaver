@@ -9,22 +9,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestNewMetricsServerInitializesRegistryAndWorker(t *testing.T) {
+func TestNewMetricsServerInitializesRegistryAndWorkerManager(t *testing.T) {
 	server := newTestMetricsServer(t)
 
 	if server.registry == nil {
 		t.Fatal("registry is nil")
 	}
-	if server.registry.statsWorker == nil {
-		t.Fatal("stats worker is nil")
+	if server.workerManager == nil {
+		t.Fatal("worker manager is nil")
 	}
-	if server.registry.statsWorker.observations == nil {
+	if server.workerManager.worker == nil {
+		t.Fatal("worker manager worker is nil")
+	}
+	if server.workerManager.worker.observations == nil {
 		t.Fatal("stats worker observations channel is nil")
 	}
-	if cap(server.registry.statsWorker.observations) != defaultObservationBufferCapacity {
+	if cap(server.workerManager.worker.observations) != defaultObservationBufferCapacity {
 		t.Fatalf(
 			"stats worker observations channel capacity = %d, want %d",
-			cap(server.registry.statsWorker.observations),
+			cap(server.workerManager.worker.observations),
 			defaultObservationBufferCapacity,
 		)
 	}
@@ -184,6 +187,32 @@ func TestMetricEndpointsRejectMissingSeries(t *testing.T) {
 	}
 }
 
+func TestCountMetricRoutesToRegistryWorker(t *testing.T) {
+	registry := newSeriesRegistry()
+	manager := newStatisticsWorkerManager(1)
+	registryWorker := newStatisticsWorker(1)
+	key := seriesKey{entity: "api", series: "requests"}
+	registry.register(key, newCounterSeries("requests"), registryWorker)
+	server := &metricsServer{
+		registry:      registry,
+		workerManager: manager,
+	}
+
+	_, err := server.CountMetric(context.Background(), &collectorpb.CountMetricRequest{
+		Metric: &collectorpb.MetricRef{Entity: key.entity, Series: key.series},
+		Value:  1,
+	})
+	if err != nil {
+		t.Fatalf("CountMetric() error = %v", err)
+	}
+	if got := len(registryWorker.observations); got != 1 {
+		t.Fatalf("registry worker observation count = %d, want 1", got)
+	}
+	if got := len(manager.worker.observations); got != 0 {
+		t.Fatalf("manager worker observation count = %d, want 0", got)
+	}
+}
+
 func TestMetricEndpointsValidateSeriesType(t *testing.T) {
 	server := newTestMetricsServer(t)
 	registerMetrics(t, server, &collectorpb.RegisterMetricsRequest{
@@ -300,7 +329,7 @@ func assertRegisteredSeries(
 	if !exists {
 		t.Fatalf("series %+v is not registered", key)
 	}
-	if worker != server.registry.statsWorker {
+	if worker != server.workerManager.worker {
 		t.Fatalf("series %+v assigned to unexpected worker", key)
 	}
 	if definition != wantDefinition {
@@ -311,7 +340,7 @@ func assertRegisteredSeries(
 func registrySize(registry *seriesRegistry) int {
 	registry.mutex.RLock()
 	defer registry.mutex.RUnlock()
-	return len(registry.workersBySeries)
+	return len(registry.series)
 }
 
 func newCounterSeries(name string) *collectorpb.Series {
