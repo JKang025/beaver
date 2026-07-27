@@ -126,6 +126,16 @@ func (w *statisticsWorker) process(observation observation) {
 			return
 		}
 
+		counterWindow, ok := seriesState.window.(*countRollingWindow)
+		if !ok {
+			fmt.Printf("counter series has non-counter window type")
+		}
+
+		datapoints, hasData := counterWindow.pushCount(typedObs)
+		if hasData {
+
+		}
+
 	case recordObservation:
 		fmt.Printf("recordObservation type is currently not supported.")
 		return
