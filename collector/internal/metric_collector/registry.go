@@ -31,17 +31,21 @@ func newSeriesRegistry(observationBufferCapacity int) *seriesRegistry {
 func (r *seriesRegistry) register(
 	key seriesKey,
 	definition *collectorpb.Series,
-) bool {
+) (bool, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
 	if _, exists := r.workersBySeries[key]; exists {
-		return false
+		return false, nil
 	}
 
-	r.statsWorker.registerSeries(key, definition)
+	err := r.statsWorker.registerSeries(key, definition)
+	if err != nil {
+		return false, err
+	}
+
 	r.workersBySeries[key] = r.statsWorker
-	return true
+	return true, nil
 }
 
 // lookup whether series is registered

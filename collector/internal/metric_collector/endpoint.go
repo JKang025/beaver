@@ -2,6 +2,7 @@ package metriccollector
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	collectorpb "github.com/JKang025/beaver/proto/collector"
@@ -100,7 +101,10 @@ func (s *metricsServer) RegisterMetrics(
 			entity: entity,
 			series: seriesDefinition.GetName(),
 		}
-		s.registry.register(key, seriesDefinition)
+		_, err := s.registry.register(key, seriesDefinition)
+		if err != nil {
+			fmt.Printf("failed to register series %s: %v\n", key.series, err)
+		}
 	}
 
 	return &collectorpb.RegisterMetricsResponse{}, nil

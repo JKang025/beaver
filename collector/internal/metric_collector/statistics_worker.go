@@ -37,23 +37,40 @@ func newStatisticsWorker(bufferCapacity int) *statisticsWorker {
 func (w *statisticsWorker) registerSeries(
 	key seriesKey,
 	definition *collectorpb.Series,
-) {
+) error {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 
-	window := rollingWindow{
-		metadata: windowMetadata{
-			duration:     defaultWindowDuration,
-			step:         defaultWindowStep,
-			currentStart: time.Time{},
-		},
-		observations: make([]observation, 0),
+	// create shared objects across all rollingWindow types
+	metadata := windowMetadata{
+		duration: defaultWindowDuration,
+		step:     defaultWindowStep,
+	}
+	var window rollingWindow
+
+	switch definition.GetConfig().(type) {
+	case *collectorpb.Series_Counter:
+		window = &countRollingWindow{
+			observations:    make([]countObservation, 0),
+			totalValue:      0,
+			metadata:        metadata,
+			windowStartTime: time.Time{},
+			aggregations:    definition.GetCounter().GetAggregations(),
+		}
+
+	case *collectorpb.Series_Gauge:
+		return fmt.Errorf("not implemented")
+
+	case *collectorpb.Series_Sample:
+		return fmt.Errorf("not implemented")
 	}
 
 	w.series[key] = &seriesState{
 		definition: definition,
 		window:     window,
 	}
+
+	return nil
 }
 
 // check if series exists in this stats worker
