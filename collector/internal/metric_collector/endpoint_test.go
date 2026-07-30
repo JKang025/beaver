@@ -21,6 +21,12 @@ func TestNewMetricsServerInitializesRegistryAndWorkerManager(t *testing.T) {
 	if server.workerManager.worker == nil {
 		t.Fatal("worker manager worker is nil")
 	}
+	if server.store == nil {
+		t.Fatal("memory store is nil")
+	}
+	if server.workerManager.worker.store != server.store {
+		t.Fatal("worker and server have different memory stores")
+	}
 	if server.workerManager.worker.observations == nil {
 		t.Fatal("stats worker observations channel is nil")
 	}
@@ -189,8 +195,8 @@ func TestMetricEndpointsRejectMissingSeries(t *testing.T) {
 
 func TestCountMetricRoutesToRegistryWorker(t *testing.T) {
 	registry := newSeriesRegistry()
-	manager := newStatisticsWorkerManager(1)
-	registryWorker := newStatisticsWorker(1)
+	manager := newStatisticsWorkerManager(1, newMemoryStore())
+	registryWorker := newStatisticsWorker(1, newMemoryStore())
 	key := seriesKey{entity: "api", series: "requests"}
 	registry.register(key, newCounterSeries("requests"), registryWorker)
 	server := &metricsServer{

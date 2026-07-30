@@ -14,6 +14,7 @@ type statisticsWorker struct {
 	mutex        sync.RWMutex
 	observations chan observation
 	series       map[seriesKey]*seriesState
+	store        *memoryStore
 }
 
 // seriesState contains worker-owned aggregation state for one series.
@@ -28,10 +29,14 @@ const (
 )
 
 // newStatisticsWorker creates a worker with a bounded observation queue.
-func newStatisticsWorker(bufferCapacity int) *statisticsWorker {
+func newStatisticsWorker(
+	bufferCapacity int,
+	store *memoryStore,
+) *statisticsWorker {
 	return &statisticsWorker{
 		observations: make(chan observation, bufferCapacity),
 		series:       make(map[seriesKey]*seriesState),
+		store:        store,
 	}
 }
 
@@ -119,8 +124,10 @@ func (w *statisticsWorker) process(observation observation) {
 			return
 		}
 
-		// Completed datapoints will be handed to the metric store in a later change.
-		counterWindow.pushCount(typedObs)
+		datapoints, _ := counterWindow.pushCount(typedObs)
+		for _, datapoint := range datapoints {
+			w.store.push(key, datapoint)
+		}
 
 	case recordObservation:
 		fmt.Printf("recordObservation type is currently not supported.")

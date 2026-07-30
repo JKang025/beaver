@@ -13,9 +13,10 @@ type statisticsWorkerManager struct {
 
 func newStatisticsWorkerManager(
 	observationBufferCapacity int,
+	store *memoryStore,
 ) *statisticsWorkerManager {
 	return &statisticsWorkerManager{
-		worker: newStatisticsWorker(observationBufferCapacity),
+		worker: newStatisticsWorker(observationBufferCapacity, store),
 	}
 }
 

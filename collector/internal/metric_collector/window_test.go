@@ -45,18 +45,42 @@ func TestCountRollingWindowTightenWindowReturnsEveryStep(t *testing.T) {
 	)
 
 	got := window.tightenWindow(start.Add(3 * time.Second))
-	want := []countDataPoints{
+	want := []countDataPoint{
 		{
-			collectorpb.CounterAggregation_COUNTER_AGGREGATION_SUM:  6,
-			collectorpb.CounterAggregation_COUNTER_AGGREGATION_RATE: 3,
+			at:          start,
+			duration:    3 * time.Second,
+			aggregation: collectorpb.CounterAggregation_COUNTER_AGGREGATION_SUM,
+			value:       6,
 		},
 		{
-			collectorpb.CounterAggregation_COUNTER_AGGREGATION_SUM:  4,
-			collectorpb.CounterAggregation_COUNTER_AGGREGATION_RATE: 4,
+			at:          start,
+			duration:    3 * time.Second,
+			aggregation: collectorpb.CounterAggregation_COUNTER_AGGREGATION_RATE,
+			value:       3,
 		},
 		{
-			collectorpb.CounterAggregation_COUNTER_AGGREGATION_SUM:  0,
-			collectorpb.CounterAggregation_COUNTER_AGGREGATION_RATE: 0,
+			at:          start.Add(time.Second),
+			duration:    3 * time.Second,
+			aggregation: collectorpb.CounterAggregation_COUNTER_AGGREGATION_SUM,
+			value:       4,
+		},
+		{
+			at:          start.Add(time.Second),
+			duration:    3 * time.Second,
+			aggregation: collectorpb.CounterAggregation_COUNTER_AGGREGATION_RATE,
+			value:       4,
+		},
+		{
+			at:          start.Add(2 * time.Second),
+			duration:    3 * time.Second,
+			aggregation: collectorpb.CounterAggregation_COUNTER_AGGREGATION_SUM,
+			value:       0,
+		},
+		{
+			at:          start.Add(2 * time.Second),
+			duration:    3 * time.Second,
+			aggregation: collectorpb.CounterAggregation_COUNTER_AGGREGATION_RATE,
+			value:       0,
 		},
 	}
 
@@ -92,8 +116,8 @@ func TestCountRollingWindowPushCountSlidesMultipleSteps(t *testing.T) {
 	if !slid {
 		t.Fatal("pushCount() did not report sliding the window")
 	}
-	if len(got) != 3 {
-		t.Fatalf("len(pushCount()) = %d, want 3", len(got))
+	if len(got) != 6 {
+		t.Fatalf("len(pushCount()) = %d, want 6", len(got))
 	}
 	if window.windowStartTime != start.Add(3*time.Second) {
 		t.Fatalf(

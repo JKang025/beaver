@@ -16,10 +16,14 @@ func (workerManagerTestObservation) observationMetadata() observationMetadata {
 func TestStatisticsWorkerManagerOwnsConfiguredWorker(t *testing.T) {
 	const observationBufferCapacity = 25
 
-	manager := newStatisticsWorkerManager(observationBufferCapacity)
+	store := newMemoryStore()
+	manager := newStatisticsWorkerManager(observationBufferCapacity, store)
 
 	if manager.worker == nil {
 		t.Fatal("worker is nil")
+	}
+	if manager.worker.store != store {
+		t.Fatal("worker has unexpected memory store")
 	}
 	if got := cap(manager.worker.observations); got != observationBufferCapacity {
 		t.Fatalf(
@@ -31,7 +35,7 @@ func TestStatisticsWorkerManagerOwnsConfiguredWorker(t *testing.T) {
 }
 
 func TestStatisticsWorkerManagerAssignsSeriesToOwnedWorker(t *testing.T) {
-	manager := newStatisticsWorkerManager(0)
+	manager := newStatisticsWorkerManager(0, newMemoryStore())
 	key := seriesKey{entity: "api", series: "requests"}
 	definition := newCounterSeries("requests")
 
@@ -55,7 +59,7 @@ func TestStatisticsWorkerManagerAssignsSeriesToOwnedWorker(t *testing.T) {
 }
 
 func TestStatisticsWorkerManagerStartsOwnedWorker(t *testing.T) {
-	manager := newStatisticsWorkerManager(0)
+	manager := newStatisticsWorkerManager(0, newMemoryStore())
 	ctx, cancel := context.WithCancel(t.Context())
 	manager.start(ctx)
 

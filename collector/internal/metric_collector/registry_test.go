@@ -36,7 +36,7 @@ func TestConvertMetricRefToSeriesKeyAcceptsNilRef(t *testing.T) {
 
 func TestSeriesRegistryRegisterAndLookup(t *testing.T) {
 	registry := newSeriesRegistry()
-	worker := newStatisticsWorker(0)
+	worker := newStatisticsWorker(0, newMemoryStore())
 	key := seriesKey{entity: "api", series: "requests"}
 	definition := newCounterSeries("requests")
 
@@ -58,14 +58,14 @@ func TestSeriesRegistryRegisterAndLookup(t *testing.T) {
 
 func TestSeriesRegistryRegisterPreservesFirstDefinition(t *testing.T) {
 	registry := newSeriesRegistry()
-	firstWorker := newStatisticsWorker(0)
+	firstWorker := newStatisticsWorker(0, newMemoryStore())
 	key := seriesKey{entity: "api", series: "requests"}
 	firstDefinition := newCounterSeries("requests")
 
 	if registered := registry.register(key, firstDefinition, firstWorker); !registered {
 		t.Fatal("first register() = false, want true")
 	}
-	secondWorker := newStatisticsWorker(0)
+	secondWorker := newStatisticsWorker(0, newMemoryStore())
 	if registered := registry.register(
 		key,
 		newGaugeSeries("requests"),
@@ -107,7 +107,7 @@ func TestSeriesRegistrySupportsConcurrentRegistrationAndLookup(t *testing.T) {
 	const seriesCount = 100
 
 	registry := newSeriesRegistry()
-	worker := newStatisticsWorker(0)
+	worker := newStatisticsWorker(0, newMemoryStore())
 	var waitGroup sync.WaitGroup
 
 	for index := 0; index < seriesCount; index++ {

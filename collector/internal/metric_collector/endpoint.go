@@ -18,18 +18,24 @@ type metricsServer struct {
 	registrationMutex sync.Mutex
 	registry          *seriesRegistry
 	workerManager     *statisticsWorkerManager
+	store             *memoryStore
 }
 
 const defaultObservationBufferCapacity = 1000
 
 func NewMetricsServer(ctx context.Context) collectorpb.MetricsCollectorServer {
 	registry := newSeriesRegistry()
-	workerManager := newStatisticsWorkerManager(defaultObservationBufferCapacity)
+	store := newMemoryStore()
+	workerManager := newStatisticsWorkerManager(
+		defaultObservationBufferCapacity,
+		store,
+	)
 
 	workerManager.start(ctx)
 	return &metricsServer{
 		registry:      registry,
 		workerManager: workerManager,
+		store:         store,
 	}
 }
 

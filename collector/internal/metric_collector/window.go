@@ -17,8 +17,19 @@ type rollingWindow interface {
 	getMetadata() windowMetadata
 }
 
-// countDataPoints maps each configured counter aggregation to its window value.
-type countDataPoints map[collectorpb.CounterAggregation]int64
+// dataPoint exposes the time interval shared by each metric datapoint type.
+type dataPoint interface {
+	timestamp() time.Time
+	aggregationDuration() time.Duration
+}
+
+// countDataPoint contains one counter aggregation value for a time interval.
+type countDataPoint struct {
+	at          time.Time
+	duration    time.Duration
+	aggregation collectorpb.CounterAggregation
+	value       int64
+}
 
 // countRollingWindow tracks counter observations and their aggregate sum.
 type countRollingWindow struct {
@@ -40,7 +51,7 @@ func (c *countRollingWindow) getMetadata() windowMetadata {
 
 func (c *countRollingWindow) pushCount(
 	obs countObservation,
-) ([]countDataPoints, bool) {
+) ([]countDataPoint, bool) {
 	currStartWindow := belongToNewWindow(obs, c.metadata)
 
 	if c.windowStartTime.IsZero() {
@@ -56,7 +67,7 @@ func (c *countRollingWindow) pushCount(
 
 	datapoints := c.tightenWindow(currStartWindow)
 	c.addCount(obs)
-	return datapoints, len(datapoints) > 0
+	return datapoints, true
 }
 
 func (c *countRollingWindow) addCount(obs countObservation) {
@@ -66,10 +77,10 @@ func (c *countRollingWindow) addCount(obs countObservation) {
 
 func (c *countRollingWindow) tightenWindow(
 	nextWindowStartTime time.Time,
-) []countDataPoints {
-	var datapoints []countDataPoints
+) []countDataPoint {
+	var datapoints []countDataPoint
 	for c.windowStartTime.Before(nextWindowStartTime) {
-		datapoints = append(datapoints, c.getCurrWindowDataPoints())
+		datapoints = append(datapoints, c.getCurrWindowDataPoints()...)
 		c.windowStartTime = c.windowStartTime.Add(c.metadata.step)
 		c.removeExpiredObservations()
 	}
@@ -88,22 +99,37 @@ func (c *countRollingWindow) removeExpiredObservations() {
 	c.observations = retained
 }
 
-func (c *countRollingWindow) getCurrWindowDataPoints() countDataPoints {
-	datapoints := make(countDataPoints, len(c.aggregations))
+func (c *countRollingWindow) getCurrWindowDataPoints() []countDataPoint {
+	datapoints := make([]countDataPoint, 0, len(c.aggregations))
 	for _, agg := range c.aggregations {
+		var value int64
 		switch agg {
 		case collectorpb.CounterAggregation_COUNTER_AGGREGATION_SUM:
-			datapoints[agg] = c.totalValue
+			value = c.totalValue
 		case collectorpb.CounterAggregation_COUNTER_AGGREGATION_RATE:
-			var rate int64
 			if len(c.observations) > 0 {
-				rate = c.totalValue / int64(len(c.observations))
+				value = c.totalValue / int64(len(c.observations))
 			}
-			datapoints[agg] = rate
 		}
+		datapoints = append(datapoints, countDataPoint{
+			at:          c.windowStartTime,
+			duration:    c.metadata.duration,
+			aggregation: agg,
+			value:       value,
+		})
 	}
 	return datapoints
 }
+
+func (p countDataPoint) timestamp() time.Time {
+	return p.at
+}
+
+func (p countDataPoint) aggregationDuration() time.Duration {
+	return p.duration
+}
+
+var _ dataPoint = countDataPoint{}
 
 // belongToNewWindow returns the start of the step-aligned window for observation.
 func belongToNewWindow(
